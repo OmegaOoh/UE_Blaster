@@ -2,7 +2,6 @@
 
 
 #include "BlasterCharacter.h"
-
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
@@ -52,6 +51,7 @@ void ABlasterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	PlayerInputComponent->BindAxis("MoveRight", this, &ABlasterCharacter::MoveRight);
 	PlayerInputComponent->BindAxis("Turn", this, &ABlasterCharacter::Turn);
 	PlayerInputComponent->BindAxis("LookUp", this, &ABlasterCharacter::LookUp);
+
 
 	//Make Character Not turn with Camera
 	bUseControllerRotationYaw = false;
