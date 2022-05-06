@@ -35,7 +35,7 @@ protected:
 	virtual void Jump() override;
 	void FireButtonPressed();
 	void FireButtonRelease();
-	
+
 
 private:
 	UPROPERTY(VisibleAnywhere, Category = Camera)
@@ -68,7 +68,7 @@ private:
 	void TurnInPlace(float DeltaTime);
 
 	UPROPERTY(EditAnywhere, Category = Combat)
-	class UAnimMontage* FireWeaponMontage;
+		class UAnimMontage* FireWeaponMontage;
 
 public:
 	void SetOverlappingWeapon(AWeapon* Weapon);

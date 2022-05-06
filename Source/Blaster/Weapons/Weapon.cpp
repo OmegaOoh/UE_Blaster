@@ -118,6 +118,8 @@ void AWeapon::Fire(const FVector& HitTarget)
 	{
 		WeaponMesh->PlayAnimation(FireAnimation, false);
 	}
+
+	//Casing
 	if (CasingClass)
 	{
 		const USkeletalMeshSocket* AmmoEjectSocket = WeaponMesh->GetSocketByName(FName("AmmoEject"));

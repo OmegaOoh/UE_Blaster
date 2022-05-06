@@ -100,18 +100,18 @@ void UCombatComponent::FireButtonPressed(bool bPressed)
 	}
 }
 
-void UCombatComponent::ServerFire_Implementation(const FVector_NetQuantize& TraceHitTarget)
+void UCombatComponent::ServerFire_Implementation(const FVector_NetQuantize& ServerTraceHitTarget)
 {
-	MulticastFire(TraceHitTarget);
+	MulticastFire(ServerTraceHitTarget);
 }
 
-void UCombatComponent::MulticastFire_Implementation(const FVector_NetQuantize& TraceHitTarget)
+void UCombatComponent::MulticastFire_Implementation(const FVector_NetQuantize& MultiCastTraceHitTarget)
 {
 	if (EquippedWeapon == nullptr) return;
 	if (Character)
 	{
 		Character->PlayFireMontage(bAiming);
-		EquippedWeapon->Fire(TraceHitTarget);
+		EquippedWeapon->Fire(MultiCastTraceHitTarget);
 	}
 }
 
@@ -138,12 +138,14 @@ void UCombatComponent::TraceUnderCrosshair(FHitResult& TraceHitResult)
 		FVector Start = CrosshairWorldPosition;
 		FVector End = Start + CrosshairWorldDirection * TRACE_LENGTH;
 
+
 		GetWorld()->LineTraceSingleByChannel(
 			TraceHitResult,
 			Start,
 			End,
 			ECollisionChannel::ECC_Visibility
 		);
+		if (!TraceHitResult.bBlockingHit) TraceHitResult.ImpactPoint = End;
 	}
 
 }
