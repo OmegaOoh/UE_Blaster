@@ -8,6 +8,10 @@
 #include "Net/UnrealNetwork.h"
 #include "Animation/AnimationAsset.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Casing.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Engine/SkeletalMeshSocket.h"
+
 
 // Sets default values
 AWeapon::AWeapon()
@@ -113,5 +117,29 @@ void AWeapon::Fire(const FVector& HitTarget)
 	if (FireAnimation)
 	{
 		WeaponMesh->PlayAnimation(FireAnimation, false);
+	}
+	if (CasingClass)
+	{
+		const USkeletalMeshSocket* AmmoEjectSocket = WeaponMesh->GetSocketByName(FName("AmmoEject"));
+
+		if (AmmoEjectSocket)
+		{
+			FTransform SocketTransform = AmmoEjectSocket->GetSocketTransform(WeaponMesh);
+			double RandPitch = FMath::RandRange(-25.f, 25.f);
+			double RandYaw = FMath::RandRange(-5.f, 5.f);
+			double RandRoll = FMath::RandRange(-45.f, 45.f);
+			FRotator WeaponRotation = SocketTransform.GetRotation().Rotator();
+			FRotator ShellRotation = WeaponRotation.Add(RandPitch, RandYaw, RandRoll);
+
+				UWorld* World = GetWorld();
+				if (World)
+				{
+					World->SpawnActor<ACasing>(
+						CasingClass,
+						SocketTransform.GetLocation(),
+						ShellRotation
+						);
+				}
+		}
 	}
 }

@@ -124,7 +124,6 @@ void ABlasterCharacter::LookUp(float Value)
 
 void ABlasterCharacter::EquipButtonPressed()
 {
-	UE_LOG(LogTemp, Warning, TEXT("EquipButtonPressed"))
 	if (Combat)
 	{
 		if (HasAuthority())
