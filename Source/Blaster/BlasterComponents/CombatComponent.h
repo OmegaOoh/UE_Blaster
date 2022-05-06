@@ -6,31 +6,65 @@
 #include "Components/ActorComponent.h"
 #include "CombatComponent.generated.h"
 
-
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
+UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class BLASTER_API UCombatComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
-public:	
-	// Sets default values for this component's properties
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+public:
 	UCombatComponent();
 	friend class ABlasterCharacter;
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	void EquipWeapon(class AWeapon* WeaponToEquip);
 
 protected:
-	// Called when the game starts
 	virtual void BeginPlay() override;
+	void SetAiming(bool bIsAiming);
+
+	UFUNCTION(Server, Reliable)
+	void ServerSetAiming(bool bIsAiming);
+
+	UFUNCTION()
+	void OnRep_EquippedWeapon();
+
+	void FireButtonPressed(bool bPressed);
+
+	UFUNCTION(Server, Reliable)
+	void ServerFire();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastFire();
+
+
+	void TraceUnderCrosshair(FHitResult& TraceHitResult);
 
 private:
-
 	class ABlasterCharacter* Character;
-	class AWeapon* EquippedWeapon;
 
-public:	
-	
+	UPROPERTY(ReplicatedUsing = OnRep_EquippedWeapon)
+		AWeapon* EquippedWeapon;
 
-		
+	UPROPERTY(Replicated)
+		bool bAiming;
+
+	UPROPERTY(EditAnywhere)
+		float BaseWalkSpeed;
+
+	UPROPERTY(EditAnywhere)
+		float AimWalkSpeed;
+
+	UPROPERTY(EditAnywhere)
+		float BaseCrouchSpeed;
+
+	UPROPERTY(EditAnywhere)
+		float AimCrouchSpeed;
+
+	bool bFireButtonPressed;
+
+	FVector HitTarget;
+
+public:
+
 };
