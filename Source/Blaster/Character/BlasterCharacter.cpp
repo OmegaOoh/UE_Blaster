@@ -252,10 +252,6 @@ void ABlasterCharacter::PlayFireMontage(bool bAiming)
 		AnimInstance->Montage_Play(FireWeaponMontage);
 		FName SectionName = bAiming ? FName("ADS") : FName("HipFire");
 		AnimInstance->Montage_JumpToSection(SectionName);
-		if(AnimInstance->Montage_IsPlaying(FireWeaponMontage))
-		{
-			UE_LOG(LogTemp,Warning, TEXT("Montage is Playing"))
-		}
 	}
 }
 

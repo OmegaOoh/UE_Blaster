@@ -114,9 +114,9 @@ void AWeapon::ShowPickupWidget(bool bShowWidget)
 
 void AWeapon::Fire(const FVector& HitTarget)
 {
-	if (FireAnimation)
+	if (WeaponFireAnimation)
 	{
-		WeaponMesh->PlayAnimation(FireAnimation, false);
+		WeaponMesh->PlayAnimation(WeaponFireAnimation, false);
 	}
 
 	//Casing

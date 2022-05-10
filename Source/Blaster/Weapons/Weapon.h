@@ -48,6 +48,8 @@ protected:
 			int32 OtherBodyIndex
 		);
 
+
+
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Weapon Properties")
 		USkeletalMeshComponent* WeaponMesh;
@@ -65,15 +67,35 @@ private:
 		class UWidgetComponent* PickupWidget;
 
 	UPROPERTY(EditAnywhere, Category = "Weapon Properties")
-		class UAnimationAsset* FireAnimation;
+		class UAnimationAsset* WeaponFireAnimation;
 
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<class ACasing> CasingClass;
+
 
 
 public:
 	void SetWeaponState(EWeaponState State);
 	FORCEINLINE USphereComponent* GetAreaSphere() const { return AreaSphere; }
 	FORCEINLINE USkeletalMeshComponent* GetWeaponMesh() const { return WeaponMesh; }
+
+	/*
+* Texture for The Weapon Crosshairs
+*/
+
+	UPROPERTY(EditAnywhere, Category = Crosshairs);
+	class UTexture2D* CrosshairsCenter;
+
+	UPROPERTY(EditAnywhere, Category = Crosshairs);
+	class UTexture2D* CrosshairsLeft;
+
+	UPROPERTY(EditAnywhere, Category = Crosshairs);
+	class UTexture2D* CrosshairRight;
+
+	UPROPERTY(EditAnywhere, Category = Crosshairs);
+	class UTexture2D* CrosshairTop;
+
+	UPROPERTY(EditAnywhere, Category = Crosshairs);
+	class UTexture2D* CrosshairsBottom;
 
 };

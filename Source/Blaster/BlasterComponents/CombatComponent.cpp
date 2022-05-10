@@ -4,14 +4,14 @@
 #include "CombatComponent.h"
 #include "Blaster/Weapons/Weapon.h"
 #include "Blaster/Character/BlasterCharacter.h"
-#include "Components/SkeletalMeshComponent.h"
 #include "Engine/SkeletalMeshSocket.h"
 #include "Components/SphereComponent.h"
-#include "GameFramework/CharacterMovementComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
-
-#define TRACE_LENGTH 80000.f;
+#include "DrawDebugHelpers.h"
+#include "Blaster/PlayerController/BlasterPlayerController.h"
+#include "Blaster/HUD/BlasterHUD.h"
 
 UCombatComponent::UCombatComponent()
 {
@@ -46,6 +46,44 @@ void UCombatComponent::BeginPlay()
 void UCombatComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	SetHUDCrosshair(DeltaTime);
+
+}
+
+void UCombatComponent::SetHUDCrosshair(float DeltaTime)
+{
+	if (Character || Character->Controller == nullptr) return;
+	Controller = Controller == nullptr ? Cast<ABlasterPlayerController>(Character->Controller) : Controller;
+	if(Controller)
+	{
+		HUD = HUD == nullptr ? Cast<ABlasterHUD>(Controller->GetHUD()) : HUD;
+		if(HUD)
+		{
+			FHUDPackage HUDPackage;
+			if (EquippedWeapon)
+			{
+				HUDPackage.CrosshairsCenter = EquippedWeapon->CrosshairsCenter;
+				HUDPackage.CrosshairsRight = EquippedWeapon->CrosshairRight;
+				HUDPackage.CrosshairsLeft = EquippedWeapon->CrosshairsLeft;
+				HUDPackage.CrosshairsTop = EquippedWeapon->CrosshairTop;
+				HUDPackage.CrosshairsBottom = EquippedWeapon->CrosshairsBottom;
+
+				HUD->SetHUDPackage(HUDPackage);
+			}
+			else
+			{
+				HUDPackage.CrosshairsCenter = nullptr;
+				HUDPackage.CrosshairsRight = nullptr;
+				HUDPackage.CrosshairsLeft = nullptr;
+				HUDPackage.CrosshairsTop = nullptr;
+				HUDPackage.CrosshairsBottom = nullptr;
+
+				
+			}
+			HUD->SetHUDPackage(HUDPackage);
+		}
+	}
 
 }
 
@@ -91,7 +129,6 @@ void UCombatComponent::OnRep_EquippedWeapon()
 void UCombatComponent::FireButtonPressed(bool bPressed)
 {
 	bFireButtonPressed = bPressed;
-
 	if (bFireButtonPressed)
 	{
 		FHitResult HitResult;
@@ -100,10 +137,12 @@ void UCombatComponent::FireButtonPressed(bool bPressed)
 	}
 }
 
+
 void UCombatComponent::ServerFire_Implementation(const FVector_NetQuantize& ServerTraceHitTarget)
 {
 	MulticastFire(ServerTraceHitTarget);
 }
+
 
 void UCombatComponent::MulticastFire_Implementation(const FVector_NetQuantize& MultiCastTraceHitTarget)
 {
@@ -136,8 +175,8 @@ void UCombatComponent::TraceUnderCrosshair(FHitResult& TraceHitResult)
 	if (bScreenToWorld)
 	{
 		FVector Start = CrosshairWorldPosition;
-		FVector End = Start + CrosshairWorldDirection * TRACE_LENGTH;
 
+		FVector End = Start + CrosshairWorldDirection * TRACE_LENGTH;
 
 		GetWorld()->LineTraceSingleByChannel(
 			TraceHitResult,
@@ -145,9 +184,7 @@ void UCombatComponent::TraceUnderCrosshair(FHitResult& TraceHitResult)
 			End,
 			ECollisionChannel::ECC_Visibility
 		);
-		if (!TraceHitResult.bBlockingHit) TraceHitResult.ImpactPoint = End;
 	}
-
 }
 
 void UCombatComponent::EquipWeapon(AWeapon* WeaponToEquip)
