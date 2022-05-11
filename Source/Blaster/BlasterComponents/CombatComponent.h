@@ -47,6 +47,7 @@ protected:
 
 private:
 	class ABlasterCharacter* Character;
+
 	class ABlasterPlayerController* Controller;
 	class ABlasterHUD* HUD;
 
@@ -69,6 +70,12 @@ private:
 		float AimCrouchSpeed;
 
 	bool bFireButtonPressed;
+
+	/*
+	 * HUD and Crosshair
+	*/
+	float CrosshairVelocityFactor;
+	float CrosshairInAirFactor;
 
 public:
 

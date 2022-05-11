@@ -66,9 +66,6 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = "Weapon Properties")
 		class UWidgetComponent* PickupWidget;
 
-	UPROPERTY(EditAnywhere, Category = "Weapon Properties")
-		class UAnimationAsset* WeaponFireAnimation;
-
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<class ACasing> CasingClass;
 
@@ -79,9 +76,14 @@ public:
 	FORCEINLINE USphereComponent* GetAreaSphere() const { return AreaSphere; }
 	FORCEINLINE USkeletalMeshComponent* GetWeaponMesh() const { return WeaponMesh; }
 
+	UPROPERTY(EditAnywhere, Category = "Weapon Properties")
+		class UAnimationAsset* WeaponFireAnimation;
+
+	void SpawnCasing();
+
 	/*
-* Texture for The Weapon Crosshairs
-*/
+	* Texture for The Weapon Crosshairs
+	*/
 
 	UPROPERTY(EditAnywhere, Category = Crosshairs);
 	class UTexture2D* CrosshairsCenter;
@@ -90,10 +92,10 @@ public:
 	class UTexture2D* CrosshairsLeft;
 
 	UPROPERTY(EditAnywhere, Category = Crosshairs);
-	class UTexture2D* CrosshairRight;
+	class UTexture2D* CrosshairsRight;
 
 	UPROPERTY(EditAnywhere, Category = Crosshairs);
-	class UTexture2D* CrosshairTop;
+	class UTexture2D* CrosshairsTop;
 
 	UPROPERTY(EditAnywhere, Category = Crosshairs);
 	class UTexture2D* CrosshairsBottom;

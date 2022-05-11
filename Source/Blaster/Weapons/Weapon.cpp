@@ -119,7 +119,11 @@ void AWeapon::Fire(const FVector& HitTarget)
 		WeaponMesh->PlayAnimation(WeaponFireAnimation, false);
 	}
 
-	//Casing
+	SpawnCasing();
+}
+
+void AWeapon::SpawnCasing()
+{
 	if (CasingClass)
 	{
 		const USkeletalMeshSocket* AmmoEjectSocket = WeaponMesh->GetSocketByName(FName("AmmoEject"));
@@ -133,15 +137,15 @@ void AWeapon::Fire(const FVector& HitTarget)
 			FRotator WeaponRotation = SocketTransform.GetRotation().Rotator();
 			FRotator ShellRotation = WeaponRotation.Add(RandPitch, RandYaw, RandRoll);
 
-				UWorld* World = GetWorld();
-				if (World)
-				{
-					World->SpawnActor<ACasing>(
-						CasingClass,
-						SocketTransform.GetLocation(),
-						ShellRotation
-						);
-				}
+			UWorld* World = GetWorld();
+			if (World)
+			{
+				World->SpawnActor<ACasing>(
+					CasingClass,
+					SocketTransform.GetLocation(),
+					ShellRotation
+					);
+			}
 		}
 	}
 }
