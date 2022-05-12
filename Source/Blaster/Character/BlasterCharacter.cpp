@@ -19,7 +19,7 @@ ABlasterCharacter::ABlasterCharacter()
 
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(GetMesh());
-	CameraBoom->TargetArmLength = 100.f;
+	CameraBoom->TargetArmLength = 150.f;
 	CameraBoom->bUsePawnControlRotation = true;
 
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
@@ -62,6 +62,7 @@ void ABlasterCharacter::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	AimOffset(DeltaTime);
+	GetDeltaTime = DeltaTime;
 }
 
 void ABlasterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -147,6 +148,7 @@ void ABlasterCharacter::ServerEquipButtonPressed_Implementation()
 
 void ABlasterCharacter::CrouchButtonPressed()
 {
+	SetCameraHeight();
 	if (bIsCrouched)
 	{
 		UnCrouch();
@@ -306,6 +308,20 @@ void ABlasterCharacter::OnRep_OverlappingWeapon(AWeapon* LastWeapon)
 	}
 }
 
+void ABlasterCharacter::SetCameraHeight()
+{
+	if(!bIsCrouched)
+	{
+		CameraBoom->TargetOffset = FMath::VInterpTo(CameraBoom->TargetOffset, SpringArmCrouchTargetOffset, GetDeltaTime, CrouchCameraSpeed);
+	}
+	else
+	{
+		CameraBoom->TargetOffset = FMath::VInterpTo(CameraBoom->TargetOffset, SpringArmBaseTargetOffset, GetDeltaTime, CrouchCameraSpeed);
+	}
+	
+}
+
+
 bool ABlasterCharacter::IsWeaponEquipped()
 {
 	return (Combat && Combat->EquippedWeapon);
@@ -321,5 +337,11 @@ AWeapon* ABlasterCharacter::GetEquippedWeapon()
 	if (Combat == nullptr) return nullptr;
 	return Combat->EquippedWeapon;
 
+}
+
+FVector ABlasterCharacter::GetHitTarget() const
+{
+	if (Combat == nullptr) return FVector();
+	return Combat->HitTarget;
 }
 

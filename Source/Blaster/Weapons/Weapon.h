@@ -27,6 +27,7 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	void ShowPickupWidget(bool bShowWidget);
 	virtual void Fire(const FVector& HitTarget);
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -69,6 +70,15 @@ private:
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<class ACasing> CasingClass;
 
+	/*
+	* Zoom FOV While Aiming
+	*/
+
+	UPROPERTY(EditAnywhere)
+	float ZoomedFOV = 30.f;
+
+	UPROPERTY(EditAnywhere)
+	float ZoomInterpSpeed = 20.f;
 
 
 public:
@@ -81,9 +91,12 @@ public:
 
 	void SpawnCasing();
 
+	FORCEINLINE float GetZoomedFOV() const { return ZoomedFOV; }
+	FORCEINLINE float GetZoomedInterpSpeed() const { return ZoomInterpSpeed; }
+
 	/*
-	* Texture for The Weapon Crosshairs
-	*/
+* Texture for The Weapon Crosshairs
+*/
 
 	UPROPERTY(EditAnywhere, Category = Crosshairs);
 	class UTexture2D* CrosshairsCenter;
@@ -99,5 +112,7 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = Crosshairs);
 	class UTexture2D* CrosshairsBottom;
+
+
 
 };

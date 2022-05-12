@@ -38,7 +38,7 @@ protected:
 
 
 private:
-	UPROPERTY(VisibleAnywhere, Category = Camera)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"),Category = Camera)
 		class USpringArmComponent* CameraBoom;
 
 	UPROPERTY(VisibleAnywhere, Category = Camera)
@@ -59,6 +59,20 @@ private:
 	UFUNCTION(Server, Reliable)
 		void ServerEquipButtonPressed();
 
+	void SetCameraHeight();
+
+	float GetDeltaTime;
+
+	UPROPERTY(EditAnywhere, Category = CameraOffset)
+	FVector SpringArmCrouchTargetOffset;
+
+	UPROPERTY(EditAnywhere, Category = CameraOffset)
+	FVector SpringArmBaseTargetOffset;
+
+	UPROPERTY(EditAnywhere, Category = CameraOffset)
+	float CrouchCameraSpeed;
+
+
 	float AO_Yaw;
 	float Interp_AO_Yaw;
 	float AO_Pitch;
@@ -78,4 +92,17 @@ public:
 	FORCEINLINE float GetAO_Pitch() const { return AO_Pitch; }
 	AWeapon* GetEquippedWeapon();
 	FORCEINLINE ETurningInPlace GetTurningInPlace() const { return TurningInPlace; }
+	FVector GetHitTarget() const;
+
+	UPROPERTY(EditAnywhere, Category = WeaponRotationCorrection)
+		float RightHandRoll;
+
+	UPROPERTY(EditAnywhere, Category = WeaponRotationCorrection)
+		float RightHandYaw;
+
+	UPROPERTY(EditAnywhere, Category = WeaponRotationCorrection)
+		float RightHandPitch;
+
+	FORCEINLINE UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+
 };

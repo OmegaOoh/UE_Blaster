@@ -12,6 +12,8 @@
 #include "DrawDebugHelpers.h"
 #include "Blaster/PlayerController/BlasterPlayerController.h"
 #include "Blaster/HUD/BlasterHUD.h"
+#include "GameFramework/SpringArmComponent.h"
+#include "Camera/CameraComponent.h"
 
 UCombatComponent::UCombatComponent()
 {
@@ -37,9 +39,15 @@ void UCombatComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if(Character)
+	if (Character)
 	{
 		Character->GetCharacterMovement()->MaxWalkSpeed = BaseWalkSpeed;
+
+		if (Character->GetFollowCamera())
+		{
+			DefaultFOV = Character->GetFollowCamera()->FieldOfView;
+			CurrentFOV = DefaultFOV;
+		}
 	}
 }
 
@@ -47,7 +55,17 @@ void UCombatComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	SetHUDCrosshair(DeltaTime);
+	
+
+	if (Character && Character->IsLocallyControlled())
+	{
+		FHitResult HitResult;
+		TraceUnderCrosshair(HitResult);
+		HitTarget = HitResult.ImpactPoint;
+
+		SetHUDCrosshair(DeltaTime);
+		InterpFOV(DeltaTime);
+	}
 }
 
 void UCombatComponent::SetHUDCrosshair(float DeltaTime)
@@ -104,6 +122,24 @@ void UCombatComponent::SetHUDCrosshair(float DeltaTime)
 	}
 }
 
+void UCombatComponent::InterpFOV(float DeltaTime)
+{
+	if (EquippedWeapon == nullptr) return;
+
+	if (bAiming)
+	{
+		CurrentFOV = FMath::FInterpTo(CurrentFOV, EquippedWeapon->GetZoomedFOV(), DeltaTime, EquippedWeapon->GetZoomedInterpSpeed());
+	}
+	else
+	{
+		CurrentFOV = FMath::FInterpTo(CurrentFOV, DefaultFOV, DeltaTime, ZoomInterpSpeed);
+	}
+	if (Character && Character->GetFollowCamera())
+	{
+		Character->GetFollowCamera()->SetFieldOfView(CurrentFOV);
+	}
+}
+
 void UCombatComponent::SetAiming(bool bIsAiming)
 {
 	bAiming = bIsAiming;
@@ -151,8 +187,6 @@ void UCombatComponent::FireButtonPressed(bool bPressed)
 		FHitResult HitResult;
 		TraceUnderCrosshair(HitResult);
 		ServerFire(HitResult.ImpactPoint);
-
-		
 	}
 }
 
@@ -168,13 +202,14 @@ void UCombatComponent::MulticastFire_Implementation(const FVector_NetQuantize& M
 	if (EquippedWeapon == nullptr) return;
 	if (Character)
 	{
+		EquippedWeapon->Fire(MultiCastTraceHitTarget);
 		if (Character->HasAuthority())
 		{
 			Character->PlayFireMontage(bAiming);
-			EquippedWeapon->Fire(MultiCastTraceHitTarget);
 		}
 		else
 		{
+			Character->PlayFireMontage(bAiming);
 			EquippedWeapon->GetWeaponMesh()->PlayAnimation(EquippedWeapon->WeaponFireAnimation, false);
 			EquippedWeapon->SpawnCasing();
 		}
