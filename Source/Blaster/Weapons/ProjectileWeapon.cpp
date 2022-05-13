@@ -9,7 +9,6 @@
 
 void AProjectileWeapon::Fire(const FVector& HitTarget)
 {
-	if (!HasAuthority()) return;
 	Super::Fire(HitTarget);
 
 	APawn* InstigatorPawn = Cast<APawn>(GetOwner());
@@ -18,6 +17,7 @@ void AProjectileWeapon::Fire(const FVector& HitTarget)
 	if(MuzzleFlashSocket)
 	{
 		FTransform SocketTransform = MuzzleFlashSocket->GetSocketTransform(GetWeaponMesh());
+
 		//From MuzzleFlash Socket ot Hit Location from TraceUnderCrosshair
 		FVector ToTarget = HitTarget - SocketTransform.GetLocation();
 		FRotator TargetRotation = ToTarget.Rotation();

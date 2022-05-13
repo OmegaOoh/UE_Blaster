@@ -78,7 +78,6 @@ void UCombatComponent::SetHUDCrosshair(float DeltaTime)
 		HUD = HUD == nullptr ? Cast<ABlasterHUD>(Controller->GetHUD()) : HUD;
 		if (HUD)
 		{
-			FHUDPackage HUDPackage;
 			if (EquippedWeapon)
 			{
 				HUDPackage.CrosshairsCenter = EquippedWeapon->CrosshairsCenter;
@@ -116,7 +115,22 @@ void UCombatComponent::SetHUDCrosshair(float DeltaTime)
 				CrosshairInAirFactor = FMath::FInterpTo(CrosshairInAirFactor, 0.f, DeltaTime, 30.f);
 			}
 
-			HUDPackage.CrosshairSpread = CrosshairVelocityFactor + CrosshairInAirFactor;
+			if (EquippedWeapon)
+			{
+				float ZoomedInterpSpeed = EquippedWeapon->GetZoomedInterpSpeed();
+				if (bAiming)
+				{
+					CrosshairAimFactor = FMath::FInterpTo(CrosshairAimFactor, 0.58f, DeltaTime, ZoomedInterpSpeed);
+				}
+				else
+				{
+					CrosshairAimFactor = FMath::FInterpTo(CrosshairAimFactor, 0.f, DeltaTime, ZoomedInterpSpeed);
+				}
+			}
+
+			CrosshairShootingFactor = FMath::FInterpTo(CrosshairShootingFactor, 0.f, DeltaTime, 20.f);
+
+			HUDPackage.CrosshairSpread = 1.f + CrosshairVelocityFactor + CrosshairInAirFactor - CrosshairAimFactor + CrosshairShootingFactor;
 			HUD->SetHUDPackage(HUDPackage);
 		}
 	}
@@ -187,6 +201,11 @@ void UCombatComponent::FireButtonPressed(bool bPressed)
 		FHitResult HitResult;
 		TraceUnderCrosshair(HitResult);
 		ServerFire(HitResult.ImpactPoint);
+
+		if(EquippedWeapon)
+		{
+			CrosshairShootingFactor = 0.75f;
+		}
 	}
 }
 
@@ -203,18 +222,8 @@ void UCombatComponent::MulticastFire_Implementation(const FVector_NetQuantize& M
 	if (Character)
 	{
 		EquippedWeapon->Fire(MultiCastTraceHitTarget);
-		if (Character->HasAuthority())
-		{
-			Character->PlayFireMontage(bAiming);
-		}
-		else
-		{
-			Character->PlayFireMontage(bAiming);
-			EquippedWeapon->GetWeaponMesh()->PlayAnimation(EquippedWeapon->WeaponFireAnimation, false);
-			EquippedWeapon->SpawnCasing();
-		}
+		Character->PlayFireMontage(bAiming);
 	}
-
 }
 
 void UCombatComponent::TraceUnderCrosshair(FHitResult& TraceHitResult)
@@ -249,6 +258,15 @@ void UCombatComponent::TraceUnderCrosshair(FHitResult& TraceHitResult)
 
 		//Fix Problem When Nothing Block TraceLine 
 		if (!TraceHitResult.bBlockingHit) TraceHitResult.ImpactPoint = End;
+
+		if (TraceHitResult.GetActor() && TraceHitResult.GetActor()->Implements<UInteractwithCrosshairInterface>())
+		{
+			HUDPackage.CrosshairColor = FLinearColor::Red;
+		}
+		else
+		{
+			HUDPackage.CrosshairColor = FLinearColor::White;
+		}
 	}
 }
 
