@@ -66,8 +66,6 @@ void UCombatComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 
 		SetHUDCrosshair(DeltaTime);
 		InterpFOV(DeltaTime);
-
-		DrawDebugSphere(GetWorld(), HitTarget, 6.f, 12, FColor::Red, false);
 	}
 }
 
@@ -215,7 +213,6 @@ void UCombatComponent::Fire()
 			CrosshairShootingFactor = 0.75f;
 		}
 		StartFireTimer();
-		bCanFire = false;
 	}
 }
 
@@ -228,6 +225,7 @@ void UCombatComponent::StartFireTimer()
 		&UCombatComponent::FireTimerFinished,
 		EquippedWeapon->FireDelay
 	);
+	bCanFire = false;
 }
 
 void UCombatComponent::FireTimerFinished()

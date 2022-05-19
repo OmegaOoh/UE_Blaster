@@ -18,6 +18,7 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	
 	virtual void PostInitializeComponents() override;
 	void PlayFireMontage(bool bAiming);
 	void PlayHitReactMontage();
@@ -42,6 +43,9 @@ protected:
 	void FireButtonPressed();
 	void FireButtonRelease();
 
+	UFUNCTION()
+	void ReceiveDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType, class AController* InstigatorController, AActor* DamageCauser);
+	void UpdateHUDHealth();
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"),Category = Camera)
@@ -105,6 +109,23 @@ private:
 	float ProxyYaw;
 	float TimeSinceLastMovementRep;
 	float CalculateSpeed();
+
+	/*
+	 * Player Health
+	 */
+
+	UPROPERTY(EditAnywhere, Category = "Player Stats")
+		float MaxHealth = 100.f;
+
+
+	UPROPERTY(ReplicatedUsing = OnRep_Health, VisibleAnywhere, Category = "Player Stats")
+	float Health = 100.f;
+
+	UFUNCTION()
+	void OnRep_Health();
+
+	class ABlasterPlayerController* BlasterPlayerController;
+
 
 public:
 	void SetOverlappingWeapon(AWeapon* Weapon);
