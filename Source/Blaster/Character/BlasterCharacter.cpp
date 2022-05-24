@@ -13,6 +13,11 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "BlasterAnimInstance.h"
 #include "Blaster/PlayerController/BlasterPlayerController.h"
+#include "Blaster/Gamemode/BlasterGamemode.h"
+#include "TimerManager.h"
+#include "Kismet/GameplayStatics.h"
+#include "Particles/ParticleSystemComponent.h"
+#include "Sound/SoundCue.h"
 
 ABlasterCharacter::ABlasterCharacter()
 {
@@ -45,6 +50,8 @@ ABlasterCharacter::ABlasterCharacter()
 	TurningInPlace = ETurningInPlace::ETIP_NotTurning;
 	NetUpdateFrequency = 66.f;
 	MinNetUpdateFrequency = 33.f;
+
+	DissolveTimeline = CreateDefaultSubobject<UTimelineComponent>(TEXT("DissolveTimelineComponent"));
 }
 
 void ABlasterCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -53,6 +60,16 @@ void ABlasterCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 
 	DOREPLIFETIME_CONDITION(ABlasterCharacter, OverlappingWeapon, COND_OwnerOnly);
 	DOREPLIFETIME(ABlasterCharacter, Health);
+}
+
+void ABlasterCharacter::Destroyed()
+{
+	Super::Destroyed();
+
+	if (ElimBotComponent)
+	{
+		ElimBotComponent->DestroyComponent();
+	}
 }
 
 void ABlasterCharacter::BeginPlay()
@@ -313,12 +330,55 @@ void ABlasterCharacter::FireButtonRelease()
 	}
 }
 
-void ABlasterCharacter::ReceiveDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType,
-	AController* InstigatorController, AActor* DamageCauser)
+void ABlasterCharacter::MaterialDissolveByDamage_Implementation()
 {
+	//Set Material to Dissolve On Damage
+	DynamicDissolveMaterialInstance_1 = DynamicDissolveMaterialInstance_1 == nullptr ? UMaterialInstanceDynamic::Create(GetMesh()->GetMaterial(0), this) : DynamicDissolveMaterialInstance_1;
+	DynamicDissolveMaterialInstance_2 = DynamicDissolveMaterialInstance_2 == nullptr ? UMaterialInstanceDynamic::Create(GetMesh()->GetMaterial(1), this) : DynamicDissolveMaterialInstance_2;
+
+	GetMesh()->SetMaterial(0, DynamicDissolveMaterialInstance_1);
+	GetMesh()->SetMaterial(1, DynamicDissolveMaterialInstance_2);
+
+	if (DynamicDissolveMaterialInstance_1 && DynamicDissolveMaterialInstance_2)
+	{
+		//Element 1
+		DynamicDissolveMaterialInstance_1->SetScalarParameterValue(TEXT("Dissolve"), 0.55f);
+		DynamicDissolveMaterialInstance_1->SetScalarParameterValue(TEXT("Dissolve Glow"), 500.f);
+
+		//Element 2
+		DynamicDissolveMaterialInstance_2->SetScalarParameterValue(TEXT("Dissolve"), 0.55f);
+		DynamicDissolveMaterialInstance_2->SetScalarParameterValue(TEXT("Dissolve Glow"), 500.f);
+
+		//Set Material Dissolve by Percentage
+		float MaterialDamageDissolve = Health / MaxHealth * 0.55f;
+
+		DynamicDissolveMaterialInstance_1->SetScalarParameterValue(TEXT("Dissolve"), MaterialDamageDissolve);
+		DynamicDissolveMaterialInstance_2->SetScalarParameterValue(TEXT("Dissolve"), MaterialDamageDissolve);
+	}
+}
+
+void ABlasterCharacter::ReceiveDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType,
+                                      AController* InstigatorController, AActor* DamageCauser)
+{
+	
 	Health = FMath::Clamp(Health - Damage, 0.f, MaxHealth);
 	UpdateHUDHealth();
 	PlayHitReactMontage();
+
+	MaterialDissolveByDamage();
+
+	if (Health == 0.f)
+	{
+		ABlasterGamemode* BlasterGamemode = GetWorld()->GetAuthGameMode<ABlasterGamemode>();
+		if (BlasterGamemode)
+		{
+			BlasterPlayerController = BlasterPlayerController == nullptr ? Cast<ABlasterPlayerController>(Controller) : BlasterPlayerController;
+			ABlasterPlayerController* AttackerController = Cast<ABlasterPlayerController>(InstigatorController);
+			BlasterGamemode->PlayerEliminated(this, BlasterPlayerController, AttackerController);
+
+		}
+
+	}
 }
 
 void ABlasterCharacter::PlayFireMontage(bool bAiming)
@@ -349,6 +409,17 @@ void ABlasterCharacter::PlayHitReactMontage()
 	}
 }
 
+void ABlasterCharacter::PlayElimMontage()
+{
+
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance && ElimMontage)
+	{
+		AnimInstance->Montage_Play(ElimMontage);
+	}
+}
+
+
 void ABlasterCharacter::OnRep_ReplicateMovement()
 {
 	Super::OnRep_ReplicateMovement();
@@ -359,6 +430,83 @@ void ABlasterCharacter::OnRep_ReplicateMovement()
 	TimeSinceLastMovementRep = 0;
 }
 
+void ABlasterCharacter::Elim()
+{
+	if(Combat && Combat->EquippedWeapon)
+	{
+		Combat->EquippedWeapon->Dropped();
+	}
+
+	MulticastElim();
+	GetWorldTimerManager().SetTimer(
+		ElimTimer,
+		this,
+		&ABlasterCharacter::ElimTimerFinished,
+		ElimDelay
+	);
+
+}
+
+void ABlasterCharacter::MulticastElim_Implementation()
+{
+	bElimmed = true;
+	PlayElimMontage();
+
+	if (DynamicDissolveMaterialInstance_1 && DynamicDissolveMaterialInstance_2)
+	{
+		//Element 1
+		DynamicDissolveMaterialInstance_1->SetScalarParameterValue(TEXT("Dissolve"), 0.f);
+		DynamicDissolveMaterialInstance_1->SetScalarParameterValue(TEXT("Dissolve Glow"), 500.f);
+
+		//Element 2
+		DynamicDissolveMaterialInstance_2->SetScalarParameterValue(TEXT("Dissolve"), 0.f);
+		DynamicDissolveMaterialInstance_2->SetScalarParameterValue(TEXT("Dissolve Glow"), 500.f);
+	}
+
+	StartDissolve();
+
+	//Disable CharacterMovement;
+	GetCharacterMovement()->DisableMovement();
+	GetCharacterMovement()->StopMovementImmediately();
+
+	if(BlasterPlayerController)
+	{
+		DisableInput(BlasterPlayerController);
+	}
+
+	//DisableCollision
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	//Spawn Elim Bot
+	if(ElimBotEffect)
+	{
+		FVector ElimBotSpawnPoint(GetActorLocation().X, GetActorLocation().Y, GetActorLocation().Z + 200.f);
+		UGameplayStatics::SpawnEmitterAtLocation(
+			GetWorld(),
+			ElimBotEffect,
+			ElimBotSpawnPoint,
+			GetActorRotation()
+			);
+	}
+	if(ElimBotSound)
+	{
+		UGameplayStatics::SpawnSoundAtLocation(
+			this,
+			ElimBotSound,
+			GetActorLocation()
+		);
+	}
+}
+
+void ABlasterCharacter::ElimTimerFinished()
+{
+	ABlasterGamemode* BlasterGamemode = GetWorld()->GetAuthGameMode < ABlasterGamemode >();
+	if (BlasterGamemode)
+	{
+		BlasterGamemode->RequestRespawn(this, Controller);
+	}
+}
 
 void ABlasterCharacter::TurnInPlace(float DeltaTime)
 {
@@ -394,6 +542,26 @@ void ABlasterCharacter::UpdateHUDHealth()
 	if (BlasterPlayerController)
 	{
 		BlasterPlayerController->SetHUDHealth(Health, MaxHealth);
+	}
+}
+
+
+void ABlasterCharacter::UpdateDissolveMaterial(float DissolveValue)
+{
+	if (DynamicDissolveMaterialInstance_1 && DynamicDissolveMaterialInstance_2)
+	{
+		DynamicDissolveMaterialInstance_1->SetScalarParameterValue(TEXT("Dissolve"), DissolveValue);
+		DynamicDissolveMaterialInstance_2->SetScalarParameterValue(TEXT("Dissolve"), DissolveValue);
+	}
+}
+
+void ABlasterCharacter::StartDissolve()
+{
+	DissolveTrack.BindDynamic(this, &ABlasterCharacter::UpdateDissolveMaterial);
+	if(DissolveCurve && DissolveTimeline)
+	{
+		DissolveTimeline->AddInterpFloat(DissolveCurve, DissolveTrack);
+		DissolveTimeline->Play();
 	}
 }
 
