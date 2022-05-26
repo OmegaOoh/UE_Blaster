@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Blaster/HUD/BlasterHUD.h"
 #include "Components/ActorComponent.h"
+#include "Blaster/Weapons/WeaponTypes.h"
 #include "CombatComponent.generated.h"
 
 #define TRACE_LENGTH 80000.f;
@@ -48,9 +49,11 @@ protected:
 	void SetHUDCrosshair(float DeltaTime);
 
 private:
+	UPROPERTY()
 	class ABlasterCharacter* Character;
-
+	UPROPERTY()
 	class ABlasterPlayerController* Controller;
+	UPROPERTY()
 	class ABlasterHUD* HUD;
 
 	UPROPERTY(ReplicatedUsing = OnRep_EquippedWeapon)
@@ -115,11 +118,23 @@ private:
 	FTimerHandle FireTimer;
 
 	bool bCanFire = true;
+	bool CanFire();
 
 	void StartFireTimer();
 	void FireTimerFinished();
 
+	UPROPERTY(ReplicatedUsing = OnRep_CarriedAmmo)
+	int32 CarriedAmmo;
 
+	UFUNCTION()
+	void OnRep_CarriedAmmo();
+
+	TMap<EWeaponType, int32> CarriedAmmoMap;
+
+	UPROPERTY(EditAnywhere,Category = WeaponStartAmmo)
+	int32 StartingARAmmo = 30;
+
+	void InitializeCarriedAmmo();
 public:
 
 };

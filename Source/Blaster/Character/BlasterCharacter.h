@@ -49,6 +49,9 @@ protected:
 	void FireButtonPressed();
 	void FireButtonRelease();
 
+	// Poll for any Relevant Class
+	void PollInit();
+
 	UFUNCTION(NetMulticast, Reliable)
 	void MaterialDissolveByDamage();
 
@@ -184,14 +187,14 @@ private:
 	UPROPERTY(EditAnywhere, Category = ElimBot)
 	class USoundCue* ElimBotSound;
 
+	UPROPERTY()
+	class ABlasterPlayerState* BlasterPlayerState;
+
 public:
 	void SetOverlappingWeapon(AWeapon* Weapon);
 	bool IsWeaponEquipped();
 	bool IsAiming();
-	FORCEINLINE float GetAO_Yaw() const { return AO_Yaw; }
-	FORCEINLINE float GetAO_Pitch() const { return AO_Pitch; }
 	AWeapon* GetEquippedWeapon();
-	FORCEINLINE ETurningInPlace GetTurningInPlace() const { return TurningInPlace; }
 	FVector GetHitTarget() const;
 
 	UPROPERTY(EditAnywhere, Category = WeaponRotationCorrection)
@@ -203,10 +206,13 @@ public:
 	UPROPERTY(EditAnywhere, Category = WeaponRotationCorrection)
 		float RightHandPitch;
 
+	FORCEINLINE float GetAO_Yaw() const { return AO_Yaw; }
+	FORCEINLINE float GetAO_Pitch() const { return AO_Pitch; }
+	FORCEINLINE ETurningInPlace GetTurningInPlace() const { return TurningInPlace; }
 	FORCEINLINE UCameraComponent* GetFollowCamera() const { return FollowCamera; }
-
 	FORCEINLINE bool ShouldRotateRootBone() const { return bRotateRootBone; }
-
 	FORCEINLINE bool IsElimmed() const { return bElimmed; }
+	FORCEINLINE float GetHealth() const { return Health; }
+	FORCEINLINE float GetMaxHealth() const { return MaxHealth; }
 
 };
