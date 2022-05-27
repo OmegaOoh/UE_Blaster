@@ -7,6 +7,7 @@
 #include "Blaster/BlasterTypes/TurningInPlace.h"
 #include "Blaster/Interfaces/InteractwithCrosshairInterface.h"
 #include "Components/TimelineComponent.h"
+#include "Blaster/BlasterTypes/CombatState.h"
 #include "BlasterCharacter.generated.h"
 
 UCLASS()
@@ -22,6 +23,7 @@ public:
 	virtual void Destroyed() override;
 	virtual void PostInitializeComponents() override;
 	void PlayFireMontage(bool bAiming);
+	void PlayReloadMontage();
 	void PlayHitReactMontage();
 	void PlayElimMontage();
 
@@ -48,6 +50,7 @@ protected:
 	virtual void Jump() override;
 	void FireButtonPressed();
 	void FireButtonRelease();
+	void ReloadButtonPressed();
 
 	// Poll for any Relevant Class
 	void PollInit();
@@ -75,7 +78,7 @@ private:
 	UFUNCTION()
 		void OnRep_OverlappingWeapon(AWeapon* LastWeapon);
 
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 		class UCombatComponent* Combat;
 
 	UFUNCTION(Server, Reliable)
@@ -103,14 +106,21 @@ private:
 	ETurningInPlace TurningInPlace;
 	void TurnInPlace(float DeltaTime);
 
+	/*
+	 * Animation Montage
+	 */
 	UPROPERTY(EditAnywhere, Category = Combat)
 		class UAnimMontage* FireWeaponMontage;
+
+	UPROPERTY(EditAnywhere, Category = Combat)
+		class UAnimMontage* ReloadMontage;
 
 	UPROPERTY(EditAnywhere, Category = Combat)
 		class UAnimMontage* HitReactMontage;
 
 	UPROPERTY(EditAnywhere, Category = Combat)
 		class UAnimMontage* ElimMontage;
+
 
 	void HideCameraIfCharacterClose();
 
@@ -214,5 +224,6 @@ public:
 	FORCEINLINE bool IsElimmed() const { return bElimmed; }
 	FORCEINLINE float GetHealth() const { return Health; }
 	FORCEINLINE float GetMaxHealth() const { return MaxHealth; }
+	ECombatState GetCombatState() const;
 
 };

@@ -6,6 +6,7 @@
 #include "Blaster/HUD/BlasterHUD.h"
 #include "Components/ActorComponent.h"
 #include "Blaster/Weapons/WeaponTypes.h"
+#include "Blaster/BlasterTypes/CombatState.h"
 #include "CombatComponent.generated.h"
 
 #define TRACE_LENGTH 80000.f;
@@ -22,6 +23,10 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	void EquipWeapon(class AWeapon* WeaponToEquip);
+	void Reload();
+	void UpdateAmmoValues();
+	UFUNCTION(BlueprintCallable)
+	void FinishReloading();
 
 protected:
 	virtual void BeginPlay() override;
@@ -31,7 +36,7 @@ protected:
 	void ServerSetAiming(bool bIsAiming);
 
 	UFUNCTION()
-	void OnRep_EquippedWeapon();
+	void OnRep_EquipWeapon();
 	void Fire();
 
 	void FireButtonPressed(bool bPressed);
@@ -45,8 +50,14 @@ protected:
 
 	void TraceUnderCrosshair(FHitResult& TraceHitResult);
 
-
 	void SetHUDCrosshair(float DeltaTime);
+
+	UFUNCTION(Server, Reliable)
+	void ServerReload();
+
+	void HandleReload();
+	int32 AmountToReload();
+
 
 private:
 	UPROPERTY()
@@ -56,7 +67,7 @@ private:
 	UPROPERTY()
 	class ABlasterHUD* HUD;
 
-	UPROPERTY(ReplicatedUsing = OnRep_EquippedWeapon)
+	UPROPERTY(ReplicatedUsing = OnRep_EquipWeapon)
 		AWeapon* EquippedWeapon;
 
 	UPROPERTY(Replicated)
@@ -94,8 +105,8 @@ private:
 
 
 	/*
-	* Aiming and FOV
-	*/
+	 * Aiming and FOV
+	 */
 
 	//FOV while Not Aiming; Set to the camera's base FOV in BeginPlay
 	float DefaultFOV;
@@ -135,6 +146,12 @@ private:
 	int32 StartingARAmmo = 30;
 
 	void InitializeCarriedAmmo();
+
+	UPROPERTY(ReplicatedUsing = OnRep_CombatState)
+	ECombatState CombatState = ECombatState::ECS_Unoccupied;
+
+	UFUNCTION()
+	void OnRep_CombatState();
 public:
 
 };
