@@ -476,9 +476,11 @@ void ABlasterCharacter::OnRep_ReplicateMovement()
 
 void ABlasterCharacter::Elim()
 {
-	if(Combat && Combat->EquippedWeapon)
+	if(Combat && Combat->EquippedWeapon && BlasterPlayerController)
 	{
 		Combat->EquippedWeapon->Dropped();
+		BlasterPlayerController->SetHUDNoWeaponName();
+		BlasterPlayerController->SetHUDCarriedAmmo(0);
 	}
 
 	MulticastElim();
@@ -495,6 +497,8 @@ void ABlasterCharacter::MulticastElim_Implementation()
 	if(BlasterPlayerController)
 	{
 		BlasterPlayerController->SetHUDWeaponAmmo(0);
+		BlasterPlayerController->SetHUDNoWeaponName();
+		BlasterPlayerController->SetHUDCarriedAmmo(0);
 	}
 
 	bElimmed = true;

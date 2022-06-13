@@ -43,7 +43,7 @@ void UCombatComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (Character)				
+	if (Character)
 	{
 		Character->GetCharacterMovement()->MaxWalkSpeed = BaseWalkSpeed;
 
@@ -55,6 +55,21 @@ void UCombatComponent::BeginPlay()
 		if (Character->HasAuthority())
 		{
 			InitializeCarriedAmmo();
+		}
+	}
+
+	
+	if(Controller)
+	{
+		Controller = Controller == nullptr ? Cast<ABlasterPlayerController>(Character->Controller) : Controller;
+		if(EquippedWeapon == nullptr)
+		{
+			Controller->SetHUDNoWeaponName();
+			Controller->SetHUDCarriedAmmo(0);
+		}
+		else
+		{
+			Controller->SetHUDWeaponName(EquippedWeapon->GetWeaponType());
 		}
 	}
 }
@@ -331,6 +346,7 @@ void UCombatComponent::EquipWeapon(AWeapon* WeaponToEquip)
 	if(Controller)
 	{
 		Controller->SetHUDCarriedAmmo(CarriedAmmo);
+		Controller->SetHUDWeaponName(EquippedWeapon->GetWeaponType());
 	}
 
 	if(EquippedWeapon->EquipSound)
@@ -446,7 +462,7 @@ void UCombatComponent::HandleReload()
 
 void UCombatComponent::OnRep_EquipWeapon()
 {
-	if (EquippedWeapon && Character)
+	if (EquippedWeapon && Character && Controller)
 	{
 		EquippedWeapon->SetWeaponState(EWeaponState::EWS_Equipped);
 		const USkeletalMeshSocket* HandSocket = Character->GetMesh()->GetSocketByName(FName("RightHandSocket"));
@@ -465,6 +481,8 @@ void UCombatComponent::OnRep_EquipWeapon()
 		}
 		Character->GetCharacterMovement()->bOrientRotationToMovement = false;
 		Character->bUseControllerRotationYaw = true;
+
+		Controller->SetHUDWeaponName(EquippedWeapon->GetWeaponType());
 	}
 }
 
@@ -480,7 +498,15 @@ void UCombatComponent::OnRep_CarriedAmmo()
 	Controller = Controller == nullptr ? Cast<ABlasterPlayerController>(Character->Controller) : Controller;
 	if (Controller)
 	{
-		Controller->SetHUDCarriedAmmo(CarriedAmmo);
+		if(EquippedWeapon != nullptr)
+		{
+			Controller->SetHUDCarriedAmmo(CarriedAmmo);
+		}
+		else
+		{
+			Controller->SetHUDCarriedAmmo(0);
+		}
+		
 	}
 }
 

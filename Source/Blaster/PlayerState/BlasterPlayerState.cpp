@@ -23,7 +23,7 @@ void ABlasterPlayerState::AddToScore(float ScoreAmount)
 
 		if (Controller)
 		{
-			Controller->SetHUDScore(Score);
+			Controller->SetHUDScore(GetScore());
 		}
 	}
 }

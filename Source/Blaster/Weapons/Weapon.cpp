@@ -233,3 +233,4 @@ bool AWeapon::IsEmpty()
 {
 	return Ammo <= 0;
 }
+
