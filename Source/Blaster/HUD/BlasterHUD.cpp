@@ -2,7 +2,7 @@
 #include "GameFramework/PlayerController.h"
 #include "CharacterOverlay.h"
 #include "Annoucement.h"
-
+#include "Blaster/Gamemode/BlasterGamemode.h"
 
 
 void ABlasterHUD::BeginPlay()
@@ -28,6 +28,7 @@ void ABlasterHUD::AddAnouncement()
 		Announcement = CreateWidget<UAnnoucement>(PlayerController, AnnoucementClass);
 		Announcement->AddToViewport();
 	}
+	
 }
 
 

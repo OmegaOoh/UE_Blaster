@@ -23,6 +23,7 @@ public:
 	void SetHUDWeaponAmmo(int32 Ammo);
 	void SetHUDCarriedAmmo(int32 Ammo);
 	void SetHUDMatchCountDown(float CountDownTime);
+	void SetHUDAnnoucementCountdown(float CountDownTime);
 	void SetHUDWeaponName(EWeaponType WeaponName);
 	void SetHUDNoWeaponName();
 	virtual void Tick(float DeltaSeconds) override;
@@ -35,6 +36,7 @@ public:
 	void CheckTimeSync(float DeltaTime);
 	void OnMatchStateSet(FName State);
 	void HandleMatchHasStarted();
+	void HandleCoolDown();
 
 protected:
 	virtual void BeginPlay() override;
@@ -55,11 +57,23 @@ protected:
 
 	float ClientServerDelta = 0.f; //Differents between Client and ServerTime
 
+	UFUNCTION(Server,Reliable)
+	void ServerCheckMatchState();
+
+	UFUNCTION(Client, Reliable)
+	void ClientJoinMidGame(FName StateofMatch, float Warmup, float Match, float Cooldown, float StartingTime);
+
 private:
 	UPROPERTY()
 	class ABlasterHUD* BlasterHUD;
 
-	float MatchTime = 120.f;
+	UPROPERTY()
+	class ABlasterGamemode* BlasterGamemode;
+
+	float LevelStartingTime = 0.f;
+	float WarmupTime = 0.f;
+	float MatchTime = 0.f;
+	float CoolDownTime = 0.f;
 	uint32 CountDownInt = 0;
 
 	UPROPERTY(ReplicatedUsing = OnRep_MatchState)
