@@ -20,13 +20,7 @@ void ABlasterPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 
-
 	BlasterHUD = Cast<ABlasterHUD>(GetHUD());
-
-	if(BlasterHUD && BlasterHUD->Announcement)
-	{
-		BlasterHUD->Announcement->RemoveFromParent();
-	}
 
 	ServerCheckMatchState();
 }
@@ -208,11 +202,6 @@ void ABlasterPlayerController::SetHUDAnnoucementCountdown(float CountDownTime)
 		FString CountDownText = FString::Printf(TEXT("%02d:%02d"), Minutes, Seconds);
 		BlasterHUD->Announcement->WarmupTime->SetText(FText::FromString(CountDownText));
 	}
-
-	if (bHUDValid && MatchState == MatchState::InProgress)
-	{
-		BlasterHUD->Announcement->SetVisibility(ESlateVisibility::Hidden);
-	}
 }
 
 void ABlasterPlayerController::SetHUDTime()
@@ -332,7 +321,7 @@ void ABlasterPlayerController::ClientJoinMidGame_Implementation(FName StateofMat
 	CoolDownTime = Cooldown;
 	OnMatchStateSet(MatchState);
 
-	if (BlasterHUD && MatchState == MatchState::WaitingToStart)
+	if (BlasterHUD && MatchState == MatchState::WaitingToStart && !HasAuthority())
 	{
 		BlasterHUD->AddAnouncement();
 	}
@@ -364,17 +353,15 @@ void ABlasterPlayerController::ReceivedPlayer()
 
 void ABlasterPlayerController::OnMatchStateSet(FName State)
 {
-	MatchState = State;
-	OnRep_MatchState();
-	if(MatchState == MatchState::InProgress)
-	{
-		HandleMatchHasStarted();
-	}
-	else if (MatchState == MatchState::Cooldown)
-	{
-		HandleCoolDown();
-	}
-	
+		MatchState = State;
+		if (MatchState == MatchState::InProgress)
+		{
+			HandleMatchHasStarted();
+		}
+		else if (MatchState == MatchState::Cooldown)
+		{
+			HandleCoolDown();
+		}
 }
 
 void ABlasterPlayerController::OnRep_MatchState()
@@ -395,11 +382,16 @@ void ABlasterPlayerController::HandleMatchHasStarted()
 
 	if (BlasterHUD)
 	{
-		BlasterHUD->AddCharacterOverlay();
+		if(BlasterHUD && !BlasterHUD->CharacterOverlay)
+		{
+			BlasterHUD->AddCharacterOverlay();
+		}
+
 		if (BlasterHUD->Announcement)
 		{
-			BlasterHUD->Announcement->SetVisibility(ESlateVisibility::Hidden);
+				BlasterHUD->Announcement->SetVisibility(ESlateVisibility::Hidden);
 		}
+		
 	}
 }
 

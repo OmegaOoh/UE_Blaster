@@ -8,6 +8,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Blaster/PlayerState/BlasterPlayerState.h"
 #include "Blaster/GameState/BlasterGameState.h"
+#include "Blaster/HUD/Annoucement.h"
 
 namespace MatchState
 {
