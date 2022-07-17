@@ -15,10 +15,10 @@ class BLASTER_API UAnnoucement : public UUserWidget
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(meta = (BindWidger))
+	UPROPERTY(meta = (BindWidget))
 		class UTextBlock* AnnoucementText;
-	UPROPERTY(meta = (BindWidger))
+	UPROPERTY(meta = (BindWidget))
 		class UTextBlock* WarmupTime;
-	UPROPERTY(meta = (BindWidger))
+	UPROPERTY(meta = (BindWidget))
 		class UTextBlock* InfoText;
 };

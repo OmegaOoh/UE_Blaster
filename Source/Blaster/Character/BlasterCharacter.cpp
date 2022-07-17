@@ -446,7 +446,22 @@ void ABlasterCharacter::PlayReloadMontage()
 		case EWeaponType::EWT_AssultRifle:
 			SectionName = FName("Rifle");
 			break;
+		case EWeaponType::EWT_RocketLauncher:
+			SectionName = FName("Rifle");
+			break;
+		case EWeaponType::EWT_Pistol:
+			SectionName = FName("Pistol");
+			break;
+		case EWeaponType::EWT_SMG:
+			SectionName = FName("Pistol");
+			break;
 
+		case EWeaponType::EWT_Shotgun:
+			SectionName = FName("Shotgun");
+			break;
+		case EWeaponType::EWT_Sniper:
+			SectionName = FName("Rifle");
+			break;
 		}
 		AnimInstance->Montage_JumpToSection(SectionName);
 	}
@@ -532,6 +547,7 @@ void ABlasterCharacter::MulticastElim_Implementation()
 
 	//Disable CharacterMovement;
 	bDisableGameplay = true;
+	GetCharacterMovement()->DisableMovement();
 	if(Combat)
 	{
 		Combat->FireButtonPressed(false);
