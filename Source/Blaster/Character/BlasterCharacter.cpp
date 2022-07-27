@@ -462,6 +462,9 @@ void ABlasterCharacter::PlayReloadMontage()
 		case EWeaponType::EWT_Sniper:
 			SectionName = FName("Rifle");
 			break;
+		case EWeaponType::EWT_GrenadeLauncher:
+			SectionName = FName("Shotgun");
+			break;
 		}
 		AnimInstance->Montage_JumpToSection(SectionName);
 	}
@@ -551,6 +554,15 @@ void ABlasterCharacter::MulticastElim_Implementation()
 	if(Combat)
 	{
 		Combat->FireButtonPressed(false);
+	}
+
+	bool bHideSniperScope = IsLocallyControlled() &&
+		Combat && Combat->bAiming &&
+		Combat->EquippedWeapon && Combat->EquippedWeapon->GetWeaponType() == EWeaponType::EWT_Sniper;
+
+	if(bHideSniperScope)
+	{
+		ShowSniperScopeWidget(false);
 	}
 
 

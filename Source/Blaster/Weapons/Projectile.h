@@ -28,26 +28,53 @@ protected:
 	UPROPERTY(EditAnyWhere)
 	float Damage = 20.f;
 
-private:
+	UPROPERTY(EditAnywhere, Category = "DamageRadius")
+	float MinDamage = 10.f;
+	UPROPERTY(EditAnywhere, Category = "DamageRadius")
+	float DamageInnerRad = 200.f;
+	UPROPERTY(EditAnywhere, Category = "DamageRadius")
+	float DamageOuterRad = 500.f;
 
-	UPROPERTY(EditAnywhere)
-	class UBoxComponent* CollisionBox;
+
+	void StartDestroyTimer();
+	void DestroyTimerFinished();
+	void SpawnTrailSystem();
+	void ExplodeDamage();
 
 	UPROPERTY(VisibleAnywhere)
-	class UProjectileMovementComponent* ProjectileMovementComponent;
+		UStaticMeshComponent* ProjectileMesh;
+
+	UPROPERTY(VisibleAnywhere)
+		class UProjectileMovementComponent* ProjectileMovementComponent;
 
 	UPROPERTY(EditAnywhere)
-	class UParticleSystem* Tracer;
+		class UBoxComponent* CollisionBox;
+
+	UPROPERTY(EditAnywhere)
+		class UParticleSystem* Tracer;
 
 	UPROPERTY()
-	class UParticleSystemComponent* TracerComponent;
+		class UParticleSystemComponent* TracerComponent;
 
 	UPROPERTY(EditAnywhere)
-	UParticleSystem* ImpactParticles;
+		UParticleSystem* ImpactParticles;
 
 	UPROPERTY(EditAnyWhere)
-	class USoundCue* ImpactSound;
+		class USoundCue* ImpactSound;
 
+	UPROPERTY(EditAnywhere)
+		class UNiagaraSystem* TrailSystem;
+
+	UPROPERTY()
+		class UNiagaraComponent* TrailSystemComponent;
+
+	FTimerHandle DestroyTimer;
+
+	UPROPERTY(EditAnywhere)
+		float DestroyTime = 3.f;
+
+private:
+	
 public:	
 	
 

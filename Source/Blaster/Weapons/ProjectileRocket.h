@@ -20,24 +20,12 @@ protected:
 
 	virtual void OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit) override;
 	virtual void Tick(float DeltaSeconds) override;
-
-	UFUNCTION(NetMulticast, Reliable)
-	void MultiCastPlayInAirSound(FVector Location );
+	virtual void Destroyed() override;
 
 
-	UPROPERTY( EditAnywhere,Category = "DamageRadius")
-	float MinDamage = 10.f;
-	UPROPERTY(EditAnywhere, Category = "DamageRadius")
-	float DamageInnerRad = 200.f;
-	UPROPERTY(EditAnywhere, Category = "DamageRadius")
-	float DamageOuterRad = 500.f;
-
+	//Sound for Rocket
 	UPROPERTY(EditAnyWhere)
 	class USoundCue* RocketInAir;
-
-private:
-	UPROPERTY(VisibleAnywhere)
-		UStaticMeshComponent* RocketMesh;
 
 	bool bIsHit = false;
 

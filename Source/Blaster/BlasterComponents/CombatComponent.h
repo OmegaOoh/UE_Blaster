@@ -162,6 +162,9 @@ private:
 	UPROPERTY(EditAnywhere, Category = WeaponStartAmmo)
 	int32 StartingSniperAmmo = 8;
 
+	UPROPERTY(EditAnywhere, Category = WeaponStartAmmo)
+	int32 StartingGLAmmo = 12;
+
 	void InitializeCarriedAmmo();
 
 	UPROPERTY(ReplicatedUsing = OnRep_CombatState)
