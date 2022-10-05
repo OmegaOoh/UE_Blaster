@@ -25,6 +25,7 @@ public:
 	void SetHUDMatchCountDown(float CountDownTime);
 	void SetHUDAnnoucementCountdown(float CountDownTime);
 	void SetHUDWeaponName(EWeaponType WeaponName);
+	void SetHUDGrenade(int32 Grenade);
 	void SetHUDNoWeaponName();
 	virtual void Tick(float DeltaSeconds) override;
 
@@ -90,6 +91,7 @@ private:
 	float HUDMaxHealth = 100.f;
 	float HUDScore;
 	int32 HUDDefeats;
+	int32 HUDGrenades;
 
 };
 

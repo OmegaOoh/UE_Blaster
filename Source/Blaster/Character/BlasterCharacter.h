@@ -22,10 +22,13 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void Destroyed() override;
 	virtual void PostInitializeComponents() override;
+
+	//Montage
 	void PlayFireMontage(bool bAiming);
 	void PlayReloadMontage();
 	void PlayHitReactMontage();
 	void PlayElimMontage();
+	void PlayThrowGrenadeMontage();
 
 	virtual void OnRep_ReplicateMovement() override;
 
@@ -38,7 +41,6 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void ShowSniperScopeWidget(bool bShowScope);
-
 
 protected:
 	virtual void BeginPlay() override;
@@ -58,6 +60,9 @@ protected:
 	void FireButtonPressed();
 	void FireButtonRelease();
 	void ReloadButtonPressed();
+	void GrenadeButtonPressed();
+
+
 
 	// Poll for any Relevant Class
 	void PollInit();
@@ -88,6 +93,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 		class UCombatComponent* Combat;
+
+	UPROPERTY(VisibleAnywhere)
+		class UBuffComponent* Buff;
 
 	UFUNCTION(Server, Reliable)
 		void ServerEquipButtonPressed();
@@ -121,14 +129,15 @@ private:
 		class UAnimMontage* FireWeaponMontage;
 
 	UPROPERTY(EditAnywhere, Category = Combat)
-		class UAnimMontage* ReloadMontage;
+		UAnimMontage* ReloadMontage;
 
 	UPROPERTY(EditAnywhere, Category = Combat)
-		class UAnimMontage* HitReactMontage;
+		UAnimMontage* HitReactMontage;
 
 	UPROPERTY(EditAnywhere, Category = Combat)
-		class UAnimMontage* ElimMontage;
-
+		UAnimMontage* ElimMontage;
+	UPROPERTY(EditAnywhere, Category = Combat)
+		UAnimMontage* ThrowGrenadeMontage;
 
 	void HideCameraIfCharacterClose();
 
@@ -208,6 +217,15 @@ private:
 	UPROPERTY()
 	class ABlasterPlayerState* BlasterPlayerState;
 
+
+	/*
+	 * Grenade
+	 */
+
+	UPROPERTY(VisibleAnywhere)
+	UStaticMeshComponent* AttachedGrenade;
+
+
 public:
 	void SetOverlappingWeapon(AWeapon* Weapon);
 	bool IsWeaponEquipped();
@@ -235,5 +253,6 @@ public:
 	FORCEINLINE float GetMaxHealth() const { return MaxHealth; }
 	FORCEINLINE UCombatComponent* GetCombatComp() const { return Combat; }
 	ECombatState GetCombatState() const;
+	FORCEINLINE UStaticMeshComponent* GetAttachedGrenade() const { return AttachedGrenade; }
 
 };

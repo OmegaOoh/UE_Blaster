@@ -28,6 +28,6 @@ void ABlasterGameState::UpdateTopScore(ABlasterPlayerState* ScoringPlayer)
 	{
 		TopScoringPlayer.Empty();
 		TopScoringPlayer.AddUnique(ScoringPlayer);
-		TopScore = ScoringPlayer->Score;
+		TopScore = ScoringPlayer->GetScore();
 	}
 }

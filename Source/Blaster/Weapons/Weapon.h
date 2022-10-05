@@ -142,8 +142,9 @@ public:
 	FORCEINLINE int32 GetAmmo() const { return Ammo; }
 	FORCEINLINE int32 GetMagCapacity() const { return MagCapacity; }
 	bool IsEmpty();
+	bool IsFull();
 
-	/*
+/*
 * Texture for The Weapon Crosshairs
 */
 
@@ -161,6 +162,8 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = Crosshairs);
 	class UTexture2D* CrosshairsBottom;
+
+
 
 
 

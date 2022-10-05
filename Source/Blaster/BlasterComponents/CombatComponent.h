@@ -30,35 +30,62 @@ public:
 
 	void FireButtonPressed(bool bPressed);
 
+	UFUNCTION(BlueprintCallable)
+	void ThrowGrenadeFinish();
+
+	UFUNCTION(BlueprintCallable)
+	void LaunchGrenade();
+
+	UFUNCTION(Server, Reliable)
+	void ServerLaunchGrenade(const FVector_NetQuantize& Target);
+
+
+	void PickupAmmo(EWeaponType AmmoType,int32 PickupAmount);
+
 protected:
 	virtual void BeginPlay() override;
-	void SetAiming(bool bIsAiming);
 
+	/*
+	 * Aiming
+	 */
+	void SetAiming(bool bIsAiming);
 	UFUNCTION(Server, Reliable)
 	void ServerSetAiming(bool bIsAiming);
 
+	/*
+	 * Fire
+	 */
 	UFUNCTION()
 	void OnRep_EquipWeapon();
 	void Fire();
-
-	
-
 	UFUNCTION(Server, Reliable)
 	void ServerFire(const FVector_NetQuantize& TraceHitTarget);
-
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastFire(const FVector_NetQuantize& TraceHitTarget);
 
-
+	/*
+	 * Crosshair
+	 */
 	void TraceUnderCrosshair(FHitResult& TraceHitResult);
-
 	void SetHUDCrosshair(float DeltaTime);
 
+	/*
+	 * Reload
+	 */
 	UFUNCTION(Server, Reliable)
 	void ServerReload();
-
 	void HandleReload();
 	int32 AmountToReload();
+
+	/*
+	 * Grenade
+	 */
+	void ThrowGrenade();
+	UFUNCTION(Server, Reliable)
+	void ServerThrowGrenade();
+	void ShowAttachedGrenade(bool bShowGrenade);
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<class AProjectile> GrenadeClass;
 
 
 private:
@@ -144,6 +171,8 @@ private:
 
 	TMap<EWeaponType, int32> CarriedAmmoMap;
 
+	int32 MaxCarriedAmmoPerWeapon = 400;
+
 	UPROPERTY(EditAnywhere,Category = WeaponStartAmmo)
 	int32 StartingARAmmo = 30;
 
@@ -172,6 +201,18 @@ private:
 
 	UFUNCTION()
 	void OnRep_CombatState();
+
+	UPROPERTY(ReplicatedUsing = OnRep_Grenades)
+	int32 Grenades = 4;
+
+	UFUNCTION()
+	void OnRep_Grenades();
+
+	UPROPERTY(EditAnywhere)
+	int32 MaxGrenades = 4;
+
+	void UpdateHUDGrenade();
 public:
+	FORCEINLINE int32 GetGrenades() const { return Grenades; }
 
 };
