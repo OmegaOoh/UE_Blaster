@@ -16,6 +16,7 @@ class BLASTER_API ABlasterPlayerController : public APlayerController
 	GENERATED_BODY()
 public:
 	void SetHUDHealth(float Health, float MaxHealth);
+	void SetHUDShield(float Shield, float MaxShield);
 	virtual void OnPossess(APawn* InPawn) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	void SetHUDScore(float Score);
@@ -26,7 +27,6 @@ public:
 	void SetHUDAnnoucementCountdown(float CountDownTime);
 	void SetHUDWeaponName(EWeaponType WeaponName);
 	void SetHUDGrenade(int32 Grenade);
-	void SetHUDNoWeaponName();
 	virtual void Tick(float DeltaSeconds) override;
 
 	virtual float GetServerTime();
@@ -86,12 +86,24 @@ private:
 	UPROPERTY()
 	class UCharacterOverlay* CharacterOverlay;
 
-	bool bInitializeCharacterOverlay = false;
+	bool bInitializeHealth = false;
 	float HUDHealth = 100.f;
 	float HUDMaxHealth = 100.f;
+	bool bInitializeShield = false;
+	float HUDShield = 0.f;
+	float HUDMaxShield = 100.f;
+	bool bInitializeScore = false;
 	float HUDScore;
+	bool bInitializeDefeats = false;
 	int32 HUDDefeats;
+	bool bInitializeGrenades = false;
 	int32 HUDGrenades;
+	bool bInitializeCarriedAmmo = false;
+	int32 HUDCarriedAmmo;
+	bool bInitializeWeaponAmmo = false;
+	int32 HUDWeaponAmmo;
+	bool bInitializeWeaponName = false;
+	EWeaponType HUDWeaponName;
 
 };
 

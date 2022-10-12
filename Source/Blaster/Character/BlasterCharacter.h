@@ -10,6 +10,7 @@
 #include "Blaster/BlasterTypes/CombatState.h"
 #include "BlasterCharacter.generated.h"
 
+
 UCLASS()
 class BLASTER_API ABlasterCharacter : public ACharacter, public IInteractwithCrosshairInterface
 {
@@ -32,6 +33,8 @@ public:
 
 	virtual void OnRep_ReplicateMovement() override;
 
+	ECombatState GetCombatState() const;
+
 	void Elim();
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastElim();
@@ -41,6 +44,27 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void ShowSniperScopeWidget(bool bShowScope);
+
+	class AWeapon* GetEquippedWeapon();
+	void SetOverlappingWeapon(AWeapon* Weapon);
+	bool IsWeaponEquipped();
+	bool IsAiming();
+	FVector GetHitTarget() const;
+
+	UPROPERTY(EditAnywhere, Category = WeaponRotationCorrection)
+		float RightHandRoll;
+
+	UPROPERTY(EditAnywhere, Category = WeaponRotationCorrection)
+		float RightHandYaw;
+
+	UPROPERTY(EditAnywhere, Category = WeaponRotationCorrection)
+		float RightHandPitch;
+
+	void UpdateHUDHealth();
+	void UpdateHUDShield();
+	void UpdateHUDAmmo();
+
+	void SpawnDefaultWeapon();
 
 protected:
 	virtual void BeginPlay() override;
@@ -72,7 +96,6 @@ protected:
 
 	UFUNCTION()
 	void ReceiveDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType, class AController* InstigatorController, AActor* DamageCauser);
-	void UpdateHUDHealth();
 
 	void RotateInPlace(float DeltaTime);
 private:
@@ -86,7 +109,7 @@ private:
 		class UWidgetComponent* OverheadWidget;
 
 	UPROPERTY(ReplicatedUsing = OnRep_OverlappingWeapon)
-		class AWeapon* OverlappingWeapon;
+		AWeapon* OverlappingWeapon;
 
 	UFUNCTION()
 		void OnRep_OverlappingWeapon(AWeapon* LastWeapon);
@@ -126,7 +149,7 @@ private:
 	 * Animation Montage
 	 */
 	UPROPERTY(EditAnywhere, Category = Combat)
-		class UAnimMontage* FireWeaponMontage;
+		UAnimMontage* FireWeaponMontage;
 
 	UPROPERTY(EditAnywhere, Category = Combat)
 		UAnimMontage* ReloadMontage;
@@ -157,15 +180,27 @@ private:
 	 */
 
 	UPROPERTY(EditAnywhere, Category = "Player Stats")
-		float MaxHealth = 100.f;
-
+	float MaxHealth = 100.f;
 
 	UPROPERTY(ReplicatedUsing = OnRep_Health, VisibleAnywhere, Category = "Player Stats")
 	float Health = 100.f;
 
 	UFUNCTION()
-	void OnRep_Health();
+	void OnRep_Health(float LastHealth);
 
+	/*
+	 * PlayerShield
+	 */
+	UPROPERTY(EditAnywhere, Category = "Player Stats")
+	float MaxShield = 100.f;
+
+	UPROPERTY(ReplicatedUsing = OnRep_Shield, EditAnywhere, Category = "Player Stats")
+	float Shield = 0.f;
+
+	UFUNCTION()
+	void OnRep_Shield(float LastShield);
+
+	UPROPERTY()
 	class ABlasterPlayerController* BlasterPlayerController;
 
 	bool bElimmed = false;
@@ -199,7 +234,7 @@ private:
 	UMaterialInstanceDynamic* DynamicDissolveMaterialInstance_1;
 
 	UPROPERTY(VisibleAnywhere, Category = Elim)
-		UMaterialInstanceDynamic* DynamicDissolveMaterialInstance_2;
+	UMaterialInstanceDynamic* DynamicDissolveMaterialInstance_2;
 
 	/*
 	 * Elim Bot
@@ -225,23 +260,14 @@ private:
 	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent* AttachedGrenade;
 
+	/*
+	 * Default Weapon
+	 */
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<AWeapon> DefaultWeaponClass;
 
 public:
-	void SetOverlappingWeapon(AWeapon* Weapon);
-	bool IsWeaponEquipped();
-	bool IsAiming();
-	AWeapon* GetEquippedWeapon();
-	FVector GetHitTarget() const;
-
-	UPROPERTY(EditAnywhere, Category = WeaponRotationCorrection)
-		float RightHandRoll;
-
-	UPROPERTY(EditAnywhere, Category = WeaponRotationCorrection)
-		float RightHandYaw;
-
-	UPROPERTY(EditAnywhere, Category = WeaponRotationCorrection)
-		float RightHandPitch;
-
 	FORCEINLINE float GetAO_Yaw() const { return AO_Yaw; }
 	FORCEINLINE float GetAO_Pitch() const { return AO_Pitch; }
 	FORCEINLINE ETurningInPlace GetTurningInPlace() const { return TurningInPlace; }
@@ -250,9 +276,12 @@ public:
 	FORCEINLINE bool IsElimmed() const { return bElimmed; }
 	FORCEINLINE bool bDisableGamePlay() const { return bDisableGameplay; }
 	FORCEINLINE float GetHealth() const { return Health; }
+	FORCEINLINE void SetHealth(float Amount) { Health = Amount; }
 	FORCEINLINE float GetMaxHealth() const { return MaxHealth; }
 	FORCEINLINE UCombatComponent* GetCombatComp() const { return Combat; }
-	ECombatState GetCombatState() const;
 	FORCEINLINE UStaticMeshComponent* GetAttachedGrenade() const { return AttachedGrenade; }
-
+	FORCEINLINE UBuffComponent* GetBuff() const { return Buff; }
+	FORCEINLINE float GetShield() const { return Shield; }
+	FORCEINLINE void SetShield(float Amount) { Shield = Amount; }
+	FORCEINLINE float GetMaxShield() const { return MaxShield; }
 };

@@ -12,6 +12,7 @@ enum class EWeaponState : uint8
 {
 	EWS_Initial UMETA(DisplayName = "Initial State"),
 	EWS_Equipped UMETA(DisplayName = "Equipped"),
+	EWS_SecondaryEquipped UMETA(DisplayName = "Equipped Secondary"),
 	EWS_Dropped UMETA(DisplayName = "Dropped"),
 
 	EWS_MAX UMETA(DisplayName = "DefaultMAX")
@@ -51,6 +52,8 @@ public:
 
 	void EnableCustomDepth(bool bEnable);
 
+	bool bDestroyedWeapon = false;
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -71,7 +74,7 @@ protected:
 			UPrimitiveComponent* OtherComp,
 			int32 OtherBodyIndex
 		);
-
+	void OnWeaponStateSet();
 
 
 private:

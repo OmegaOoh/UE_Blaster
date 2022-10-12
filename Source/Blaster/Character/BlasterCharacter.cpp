@@ -22,6 +22,7 @@
 #include "Blaster/PlayerState/BlasterPlayerState.h"
 #include "Blaster/Weapons/WeaponTypes.h"
 
+
 ABlasterCharacter::ABlasterCharacter()
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -70,6 +71,7 @@ void ABlasterCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 
 	DOREPLIFETIME_CONDITION(ABlasterCharacter, OverlappingWeapon, COND_OwnerOnly);
 	DOREPLIFETIME(ABlasterCharacter, Health);
+	DOREPLIFETIME(ABlasterCharacter, Shield);
 	DOREPLIFETIME(ABlasterCharacter, bDisableGameplay);
 }
 
@@ -94,8 +96,11 @@ void ABlasterCharacter::Destroyed()
 void ABlasterCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+	SpawnDefaultWeapon();
 
 	UpdateHUDHealth();
+	UpdateHUDShield();
+
 	if (HasAuthority())
 	{
 		OnTakeAnyDamage.AddDynamic(this, &ABlasterCharacter::ReceiveDamage);
@@ -148,6 +153,10 @@ void ABlasterCharacter::PostInitializeComponents()
 	if (Buff)
 	{
 		Buff->Character = this;
+		Buff->SetInitialSpeed(
+			GetCharacterMovement()->MaxWalkSpeed,
+			GetCharacterMovement()->MaxWalkSpeedCrouched);
+		Buff->SetInitialJumpVelocity(GetCharacterMovement()->JumpZVelocity);
 	}
 }
 
@@ -188,14 +197,8 @@ void ABlasterCharacter::EquipButtonPressed()
 	if (bDisableGameplay) return;
 	if (Combat)
 	{
-		if (HasAuthority())
-		{
-			Combat->EquipWeapon(OverlappingWeapon);
-		}
-		else
-		{
-			ServerEquipButtonPressed();
-		}
+		//Combat->EquipWeapon(OverlappingWeapon);
+		ServerEquipButtonPressed();
 	}
 }
 
@@ -203,7 +206,14 @@ void ABlasterCharacter::ServerEquipButtonPressed_Implementation()
 {
 	if (Combat)
 	{
-		Combat->EquipWeapon(OverlappingWeapon);
+		if (OverlappingWeapon)
+		{
+			Combat->EquipWeapon(OverlappingWeapon);
+		}
+		else if (Combat->ShouldSwapWeapon())
+		{
+			Combat->SwapWeapon();
+		}
 	}
 }
 
@@ -403,19 +413,17 @@ void ABlasterCharacter::MaterialDissolveByDamage_Implementation()
 
 	if (DynamicDissolveMaterialInstance_1 && DynamicDissolveMaterialInstance_2)
 	{
+		//Calculate Val of Dissolution
+		float MaterialDamageDissolve = Health / MaxHealth * 0.55f;
+
 		//Element 1
-		DynamicDissolveMaterialInstance_1->SetScalarParameterValue(TEXT("Dissolve"), 0.55f);
+		DynamicDissolveMaterialInstance_1->SetScalarParameterValue(TEXT("Dissolve"), MaterialDamageDissolve);
 		DynamicDissolveMaterialInstance_1->SetScalarParameterValue(TEXT("Dissolve Glow"), 500.f);
 
 		//Element 2
-		DynamicDissolveMaterialInstance_2->SetScalarParameterValue(TEXT("Dissolve"), 0.55f);
+		DynamicDissolveMaterialInstance_2->SetScalarParameterValue(TEXT("Dissolve"), MaterialDamageDissolve);
 		DynamicDissolveMaterialInstance_2->SetScalarParameterValue(TEXT("Dissolve Glow"), 500.f);
 
-		//Set Material Dissolve by Percentage
-		float MaterialDamageDissolve = Health / MaxHealth * 0.55f;
-
-		DynamicDissolveMaterialInstance_1->SetScalarParameterValue(TEXT("Dissolve"), MaterialDamageDissolve);
-		DynamicDissolveMaterialInstance_2->SetScalarParameterValue(TEXT("Dissolve"), MaterialDamageDissolve);
 	}
 }
 
@@ -424,8 +432,25 @@ void ABlasterCharacter::ReceiveDamage(AActor* DamagedActor, float Damage, const 
 {
 	if (bElimmed) return;
 
-	Health = FMath::Clamp(Health - Damage, 0.f, MaxHealth);
+	float DamageToHealth = Damage;
+
+	if(Shield > 0)
+	{
+		if (Shield >= Damage)
+		{
+			Shield = FMath::Clamp(Shield - Damage, 0.f, MaxShield);
+			DamageToHealth = 0.f;
+		}
+		else
+		{
+			DamageToHealth = FMath::Clamp(DamageToHealth - Shield, 0.f, Damage);
+			Shield = 0.f;
+		}
+	}
+
+	Health = FMath::Clamp(Health - DamageToHealth, 0.f, MaxHealth);
 	UpdateHUDHealth();
+	UpdateHUDShield();
 	PlayHitReactMontage();
 
 	MaterialDissolveByDamage();
@@ -541,11 +566,32 @@ void ABlasterCharacter::OnRep_ReplicateMovement()
 
 void ABlasterCharacter::Elim()
 {
-	if(Combat && Combat->EquippedWeapon && BlasterPlayerController)
+	if (Combat)
 	{
-		Combat->EquippedWeapon->Dropped();
-		BlasterPlayerController->SetHUDNoWeaponName();
-		BlasterPlayerController->SetHUDCarriedAmmo(0);
+		if (Combat->EquippedWeapon)
+		{
+			if (Combat->EquippedWeapon->bDestroyedWeapon)
+			{
+				Combat->EquippedWeapon->Destroy();
+			}
+			else
+			{
+				Combat->EquippedWeapon->Dropped();
+			}
+		}
+		if (Combat->SecondaryWeapon)
+		{
+			if (Combat->SecondaryWeapon->bDestroyedWeapon)
+			{
+				Combat->SecondaryWeapon->Destroy();
+			}
+			else
+			{
+				Combat->SecondaryWeapon->Dropped();
+			}
+		}
+
+		
 	}
 
 	MulticastElim();
@@ -562,7 +608,7 @@ void ABlasterCharacter::MulticastElim_Implementation()
 	if(BlasterPlayerController)
 	{
 		BlasterPlayerController->SetHUDWeaponAmmo(0);
-		BlasterPlayerController->SetHUDNoWeaponName();
+		BlasterPlayerController->SetHUDWeaponName(EWeaponType::EWT_MAX);
 		BlasterPlayerController->SetHUDCarriedAmmo(0);
 	}
 
@@ -656,10 +702,23 @@ void ABlasterCharacter::TurnInPlace(float DeltaTime)
 	}
 }
 
-void ABlasterCharacter::OnRep_Health()
+void ABlasterCharacter::OnRep_Health(float LastHealth)
 {
 	UpdateHUDHealth();
-	PlayHitReactMontage();
+	MaterialDissolveByDamage();
+	if(Health < LastHealth)
+	{
+		PlayHitReactMontage();
+	}
+}
+
+void ABlasterCharacter::OnRep_Shield(float LastShield)
+{
+	UpdateHUDShield();
+	if (Shield < LastShield)
+	{
+		PlayHitReactMontage();
+	}
 }
 
 void ABlasterCharacter::UpdateHUDHealth()
@@ -668,6 +727,41 @@ void ABlasterCharacter::UpdateHUDHealth()
 	if (BlasterPlayerController)
 	{
 		BlasterPlayerController->SetHUDHealth(Health, MaxHealth);
+	}
+}
+
+void ABlasterCharacter::UpdateHUDShield()
+{
+	BlasterPlayerController = BlasterPlayerController == nullptr ? Cast<ABlasterPlayerController>(Controller) : BlasterPlayerController;
+	if (BlasterPlayerController)
+	{
+		BlasterPlayerController->SetHUDShield(Shield, MaxShield);
+	}
+}
+
+void ABlasterCharacter::UpdateHUDAmmo()
+{
+	BlasterPlayerController = BlasterPlayerController == nullptr ? Cast<ABlasterPlayerController>(Controller) : BlasterPlayerController;
+	if (BlasterPlayerController && Combat && Combat->EquippedWeapon)
+	{
+		BlasterPlayerController->SetHUDCarriedAmmo(Combat->CarriedAmmo);
+		BlasterPlayerController->SetHUDWeaponAmmo(Combat->EquippedWeapon->GetAmmo());
+		BlasterPlayerController->SetHUDWeaponName(Combat->EquippedWeapon->GetWeaponType());
+	}
+}
+
+void ABlasterCharacter::SpawnDefaultWeapon()
+{
+	ABlasterGamemode* BlasterGamemode = Cast<ABlasterGamemode>(UGameplayStatics::GetGameMode(this));
+	UWorld* World = GetWorld();
+	if (BlasterGamemode && World && !bElimmed && DefaultWeaponClass)
+	{
+		AWeapon*  StartingWeapon = World->SpawnActor<AWeapon>(DefaultWeaponClass);
+		StartingWeapon->bDestroyedWeapon = true;
+		if(Combat)
+		{
+			Combat->EquipWeapon(StartingWeapon);
+		}
 	}
 }
 

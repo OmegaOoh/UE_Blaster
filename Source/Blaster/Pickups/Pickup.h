@@ -41,7 +41,17 @@ private:
 	class USoundCue* PickupSound;
 
 	UPROPERTY(EditAnywhere)
-		class UStaticMeshComponent* PickupMesh;
+	class UStaticMeshComponent* PickupMesh;
+
+	UPROPERTY(EditAnywhere)
+	class UNiagaraSystem* PickupEffect;
+
+	UPROPERTY(VisibleAnywhere)
+	class UNiagaraComponent* PickupEffectComponent;
+
+	FTimerHandle BindOverLapHandle;
+	float BindOverLapTime = 0.25f;
+	void BindOverLapTimerFinished();
 
 public:	
 	

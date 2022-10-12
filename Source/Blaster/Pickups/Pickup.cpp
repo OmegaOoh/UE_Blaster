@@ -6,6 +6,9 @@
 #include "Sound/SoundCue.h"
 #include "Components/SphereComponent.h"
 #include "Blaster/Weapons/WeaponTypes.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
+
 
 APickup::APickup()
 {
@@ -29,6 +32,9 @@ APickup::APickup()
 	PickupMesh->SetRenderCustomDepth(true);
 	PickupMesh->SetCustomDepthStencilValue(CUSTOM_DEPTH_PURPLE);
 
+	PickupEffectComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("PickupEffectComponent"));
+	PickupEffectComponent->SetupAttachment(RootComponent);
+
 }
 
 void APickup::BeginPlay()
@@ -37,9 +43,13 @@ void APickup::BeginPlay()
 
 	if(HasAuthority())
 	{
-		OverlapSphere->OnComponentBeginOverlap.AddDynamic(this, &APickup::OnSphereOverlap);
+		GetWorldTimerManager().SetTimer(
+			BindOverLapHandle,
+			this,
+			&APickup::BindOverLapTimerFinished,
+			BindOverLapTime
+		);
 	}
-	
 }
 
 void APickup::Tick(float DeltaTime)
@@ -56,6 +66,17 @@ void APickup::Destroyed()
 {
 	Super::Destroyed();
 
+	if (PickupEffect)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+			this,
+			PickupEffect,
+			GetActorLocation(),
+			GetActorRotation()
+		);
+
+	}
+
 	if(PickupSound)
 	{
 		UGameplayStatics::PlaySoundAtLocation(
@@ -70,5 +91,10 @@ void APickup::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* 
                               UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 
+}
+
+void APickup::BindOverLapTimerFinished()
+{
+		OverlapSphere->OnComponentBeginOverlap.AddDynamic(this, &APickup::OnSphereOverlap);
 }
 
