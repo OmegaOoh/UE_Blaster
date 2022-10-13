@@ -42,6 +42,7 @@ public:
 
 
 	void PickupAmmo(EWeaponType AmmoType,int32 PickupAmount);
+	bool bLocallyReload = false;
 
 protected:
 	virtual void BeginPlay() override;
@@ -74,10 +75,21 @@ protected:
 	 */
 	
 	void Fire();
+	void FireProjectile();
+	void FireHitScan();
+	void FireShotgun();
+
+	void LocalFire(const FVector_NetQuantize& LocalHitTarget);
+	void ShotGunLocalFire(const TArray<FVector_NetQuantize>& LocalHitTargets);
 	UFUNCTION(Server, Reliable)
 	void ServerFire(const FVector_NetQuantize& TraceHitTarget);
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastFire(const FVector_NetQuantize& TraceHitTarget);
+	UFUNCTION(Server, Reliable)
+	void ServerShotgunFire(const TArray<FVector_NetQuantize>& TraceHitTargetsArray);
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastShotgunFire(const TArray<FVector_NetQuantize>& TraceHitTargetsArray);
+
 
 	/*
 	 * Crosshair
@@ -118,8 +130,13 @@ private:
 	UPROPERTY(ReplicatedUsing = OnRep_Secondary)
 	AWeapon* SecondaryWeapon;
 
-	UPROPERTY(Replicated)
+	UPROPERTY(ReplicatedUsing = OnRep_Aiming)
 		bool bAiming;
+
+	bool bAimButtonPressed;
+
+	UFUNCTION()
+	void OnRep_Aiming();
 
 	UPROPERTY(EditAnywhere)
 		float BaseWalkSpeed;

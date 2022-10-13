@@ -85,9 +85,9 @@ void ABlasterCharacter::Destroyed()
 	}
 
 	ABlasterGamemode* BlasterGamemode = Cast<ABlasterGamemode>(UGameplayStatics::GetGameMode(this));
-	bool bMatchNoinProgress = BlasterGamemode && BlasterGamemode->GetMatchState() != MatchState::InProgress;
+	bool bMatchNotinProgress = BlasterGamemode && BlasterGamemode->GetMatchState() != MatchState::InProgress;
 
-	if(Combat && Combat->EquippedWeapon && bMatchNoinProgress)
+	if(Combat && Combat->EquippedWeapon && bMatchNotinProgress)
 	{
 		Combat->EquippedWeapon->Destroy();
 	}
@@ -197,7 +197,6 @@ void ABlasterCharacter::EquipButtonPressed()
 	if (bDisableGameplay) return;
 	if (Combat)
 	{
-		//Combat->EquipWeapon(OverlappingWeapon);
 		ServerEquipButtonPressed();
 	}
 }
@@ -806,6 +805,12 @@ void ABlasterCharacter::StartDissolve()
 		DissolveTimeline->AddInterpFloat(DissolveCurve, DissolveTrack);
 		DissolveTimeline->Play();
 	}
+}
+
+bool ABlasterCharacter::IsLocallyReloading()
+{
+	if (Combat == nullptr) return false;
+	return Combat->bLocallyReload;
 }
 
 void ABlasterCharacter::SetOverlappingWeapon(AWeapon* Weapon)

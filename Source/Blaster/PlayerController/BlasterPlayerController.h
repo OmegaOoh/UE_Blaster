@@ -43,6 +43,7 @@ protected:
 	virtual void BeginPlay() override;
 	void SetHUDTime();
 	void PollInit();
+	void CheckPing(float DeltaSeconds);
 
 	/*
 	 * Sync Server and Client Time
@@ -63,6 +64,9 @@ protected:
 
 	UFUNCTION(Client, Reliable)
 	void ClientJoinMidGame(FName StateofMatch, float Warmup, float Match, float Cooldown, float StartingTime);
+
+	void HighPingWarning();
+	void StopHighPingWarning();
 
 private:
 	UPROPERTY()
@@ -104,6 +108,19 @@ private:
 	int32 HUDWeaponAmmo;
 	bool bInitializeWeaponName = false;
 	EWeaponType HUDWeaponName;
+
+	float HighPingRunningTime = 0.f;
+	float HighPingAnimRunningTime = 0.f;
+
+	UPROPERTY(EditAnywhere)
+	float HighPingDuration = 5.f;
+
+	UPROPERTY(EditAnywhere)
+	float CheckPickFrequency = 15.f ;
+
+	UPROPERTY(EditAnywhere)
+	float HighPingTreshold = 100.f;
+
 
 };
 

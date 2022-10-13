@@ -18,6 +18,16 @@ enum class EWeaponState : uint8
 	EWS_MAX UMETA(DisplayName = "DefaultMAX")
 };
 
+UENUM(BlueprintType)
+enum class EFireType : uint8
+{
+	EFT_HitScan UMETA(DisplayName = "HitScan Weapon"),
+	EFT_Projectile UMETA(DisplayName = "Projectile Weapon"),
+	EFT_Shotgun UMETA(DisplayName = "Shotgun"),
+
+	EFT_MAX UMETA(DisplayName = "DefaultMax")
+};
+
 UCLASS()
 class BLASTER_API AWeapon : public AActor
 {
@@ -54,6 +64,16 @@ public:
 
 	bool bDestroyedWeapon = false;
 
+	UPROPERTY(EditAnywhere,Category =  "Weapon")
+	EFireType FireType;
+
+	
+	UPROPERTY(EditAnywhere, Category = "Weapon Scatter")
+	bool bUseScatter = false;
+
+	FVector TraceEndWithScatter(const FVector& HitTarget);
+
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -76,6 +96,15 @@ protected:
 		);
 	void OnWeaponStateSet();
 
+	/*
+	 * Trace end with Scatter
+	 */
+
+	UPROPERTY(EditAnywhere, Category = "Weapon Scatter")
+		float DistanceToSphere = 800.f;
+
+	UPROPERTY(EditAnywhere, Category = "Weapon Scatter")
+		float SphereRadius = 75.f;
 
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Weapon Properties")
@@ -96,16 +125,23 @@ private:
 	UPROPERTY(EditAnywhere,Category = "Weapon Properties")
 	TSubclassOf<class ACasing> CasingClass;
 
-	UPROPERTY(EditAnywhere, ReplicatedUsing = OnRep_Ammo, Category = Ammo)
+	UPROPERTY(EditAnywhere, Category = Ammo)
 	int32 Ammo;
 
-	UFUNCTION()
-	void OnRep_Ammo();
+	UFUNCTION(Client, Reliable)
+	void ClientUpdateAmmo(int32 ServerAmmo);
+
+	UFUNCTION(Client, Reliable)
+	void ClientAddAmmo(int32 AmmoToAdd);
 
 	void SpendRound();
 
 	UPROPERTY(EditAnywhere, Category = Ammo)
 	int32 MagCapacity;
+
+	//The Number of unprocessed server requests for Ammo
+	//Incremented in SpendRound, Decremented in ClientUpdateAmmo
+	int32 Sequence = 0;
 
 	UPROPERTY(EditAnywhere, Category = Ammo)
 	EWeaponType WeaponType;
@@ -127,8 +163,6 @@ private:
 	float ZoomInterpSpeed = 20.f;
 
 	
-
-
 public:
 	void SetWeaponState(EWeaponState State);
 	FORCEINLINE USphereComponent* GetAreaSphere() const { return AreaSphere; }
