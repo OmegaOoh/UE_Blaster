@@ -9,6 +9,8 @@
 #include "Sound/SoundCue.h"
 #include "DrawDebugHelpers.h"
 #include "WeaponTypes.h"
+#include "Blaster/BlasterComponents/LagCompensationComponent.h"
+#include "Blaster/PlayerController/BlasterPlayerController.h"
 
 
 void AHitScanWeapon::Fire(const FVector& HitTarget)
@@ -34,15 +36,34 @@ void AHitScanWeapon::Fire(const FVector& HitTarget)
 		{
 
 			ABlasterCharacter* BlasterCharacter = Cast<ABlasterCharacter>(FireHit.GetActor());
-			if (BlasterCharacter && InstigatorController && HasAuthority())
+			if (BlasterCharacter && InstigatorController )
 			{
-				UGameplayStatics::ApplyDamage(
-					BlasterCharacter,
-					Damage,
-					InstigatorController,
-					this,
-					UDamageType::StaticClass()
-				);
+				const float DamageToDeal = FireHit.BoneName.ToString() == FString("head") ? HeadShotDamage : Damage;
+				bool bCauseAuthDamage = !bUseServerSideRewind || OwnerPawn->IsLocallyControlled();
+				if (HasAuthority() && bCauseAuthDamage)
+				{
+					UGameplayStatics::ApplyDamage(
+						BlasterCharacter,
+						DamageToDeal,
+						InstigatorController,
+						this,
+						UDamageType::StaticClass()
+					);
+				}
+				else if (!HasAuthority() && bUseServerSideRewind)
+				{
+					BlasterOwnerCharacter = BlasterOwnerCharacter == nullptr ? Cast<ABlasterCharacter>(OwnerPawn) : BlasterOwnerCharacter;
+					BlasterOwnerPlayerController = BlasterOwnerPlayerController == nullptr ? Cast<ABlasterPlayerController>(InstigatorController) : BlasterOwnerPlayerController;
+					if (BlasterOwnerPlayerController && BlasterOwnerCharacter && BlasterOwnerCharacter->GetLagCompensation() && BlasterOwnerCharacter->IsLocallyControlled())
+					{
+						BlasterOwnerCharacter->GetLagCompensation()->ServerScoreRequest(
+							BlasterCharacter,
+							Start,
+							HitTarget,
+							BlasterOwnerPlayerController->GetServerTime() - BlasterOwnerPlayerController->SingleTripTime
+							);
+					}
+				}
 			}
 			
 			if (ImpactParticles)
@@ -109,8 +130,10 @@ void AHitScanWeapon::WeaponTraceHit(const FVector & TraceStart, const FVector & 
 			{
 				BeamEnd = OutHit.ImpactPoint;
 			}
-
-			DrawDebugSphere(GetWorld(), BeamEnd, 16.f, 12, FColor::Orange, true);
+			else
+			{
+				OutHit.ImpactPoint = TraceEnd;
+			}
 
 			if (BeamParticles)
 			{

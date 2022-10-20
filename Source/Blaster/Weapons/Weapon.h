@@ -43,7 +43,7 @@ public:
 	virtual void Fire(const FVector& HitTarget);
 	void Dropped();
 	void AddAmmo(int32 AmmoToAdd);
-
+	
 	/*
 	 * Automatic Fire
 	 */
@@ -106,6 +106,24 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Weapon Scatter")
 		float SphereRadius = 75.f;
 
+	UPROPERTY(EditAnywhere)
+		float Damage = 20.f;
+
+	UPROPERTY(EditAnywhere)
+		float HeadShotDamage = 40.f;
+
+	UPROPERTY(EditAnywhere,Replicated)
+	bool bUseServerSideRewind = false;
+
+	UPROPERTY()
+		class ABlasterCharacter* BlasterOwnerCharacter;
+
+	UPROPERTY()
+		class ABlasterPlayerController* BlasterOwnerPlayerController;
+
+	UFUNCTION()
+	void OnPingTooHigh(bool bPingTooHigh);
+
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Weapon Properties")
 		USkeletalMeshComponent* WeaponMesh;
@@ -146,12 +164,6 @@ private:
 	UPROPERTY(EditAnywhere, Category = Ammo)
 	EWeaponType WeaponType;
 
-	UPROPERTY()
-	class ABlasterCharacter* BlasterOwnerCharacter;
-
-	UPROPERTY()
-	class ABlasterPlayerController* BlasterOwnerPlayerController;
-
 	/*
 	* Zoom FOV While Aiming
 	*/
@@ -180,6 +192,9 @@ public:
 	FORCEINLINE int32 GetMagCapacity() const { return MagCapacity; }
 	bool IsEmpty();
 	bool IsFull();
+	FORCEINLINE float GetDamage() const { return Damage; }
+	FORCEINLINE float GetHeadShotDamage() const { return HeadShotDamage; }
+
 
 /*
 * Texture for The Weapon Crosshairs
@@ -199,9 +214,6 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = Crosshairs);
 	class UTexture2D* CrosshairsBottom;
-
-
-
 
 
 };

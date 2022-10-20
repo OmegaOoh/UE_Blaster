@@ -8,10 +8,10 @@
 #include "Animation/AnimationAsset.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Casing.h"
-#include "Blaster/Gamemode/BlasterGamemode.h"
 #include "Engine/SkeletalMeshSocket.h"
 #include "Blaster/PlayerController/BlasterPlayerController.h"
-#include <Kismet/KismetMathLibrary.h>
+#include "Kismet/KismetMathLibrary.h"
+
 
 
 // Sets default values
@@ -61,6 +61,8 @@ void AWeapon::BeginPlay()
 	{
 		PickupWidget->SetVisibility(false);
 	}
+
+
 }
 
 void AWeapon::Tick(float DeltaTime)
@@ -73,6 +75,7 @@ void AWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeP
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AWeapon, WeaponState);
+	DOREPLIFETIME_CONDITION(AWeapon, bUseServerSideRewind, COND_OwnerOnly);
 }
 
 void AWeapon::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
@@ -111,6 +114,15 @@ void AWeapon::OnWeaponStateSet()
 			WeaponMesh->SetEnableGravity(true);
 			WeaponMesh->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
 		}
+		BlasterOwnerCharacter = BlasterOwnerCharacter == nullptr ? Cast<ABlasterCharacter>(GetOwner()) : BlasterOwnerCharacter;
+		if (BlasterOwnerCharacter)
+		{
+			BlasterOwnerPlayerController = BlasterOwnerPlayerController == nullptr ? Cast<ABlasterPlayerController>(BlasterOwnerCharacter->Controller) : BlasterOwnerPlayerController;
+			if (BlasterOwnerPlayerController && HasAuthority() && !BlasterOwnerPlayerController->HighPingDelegate.IsBound())
+			{
+				BlasterOwnerPlayerController->HighPingDelegate.AddDynamic(this, &AWeapon::OnPingTooHigh);
+			}
+		}
 		break;
 
 	case EWeaponState::EWS_SecondaryEquipped:
@@ -129,7 +141,17 @@ void AWeapon::OnWeaponStateSet()
 
 		WeaponMesh->SetCustomDepthStencilValue(CUSTOM_DEPTH_TAN);
 		WeaponMesh->MarkRenderStateDirty();
-		EnableCustomDepth(true);
+
+		BlasterOwnerCharacter = BlasterOwnerCharacter == nullptr ? Cast<ABlasterCharacter>(GetOwner()) : BlasterOwnerCharacter;
+		if (BlasterOwnerCharacter)
+		{
+			BlasterOwnerPlayerController = BlasterOwnerPlayerController == nullptr ? Cast<ABlasterPlayerController>(BlasterOwnerCharacter->Controller) : BlasterOwnerPlayerController;
+			if (BlasterOwnerPlayerController && HasAuthority() && !BlasterOwnerPlayerController->HighPingDelegate.IsBound())
+			{
+				BlasterOwnerPlayerController->HighPingDelegate.RemoveDynamic(this, &AWeapon::OnPingTooHigh);
+			}
+		}
+
 		break;
 
 	case EWeaponState::EWS_Dropped:
@@ -156,6 +178,11 @@ void AWeapon::SetWeaponState(EWeaponState State)
 {
 	WeaponState = State;
 	OnWeaponStateSet();
+}
+
+void AWeapon::OnPingTooHigh(bool bPingTooHigh)
+{
+	bUseServerSideRewind = !bPingTooHigh;
 }
 
 void AWeapon::OnRep_WeaponState()
@@ -316,17 +343,6 @@ FVector AWeapon::TraceEndWithScatter(const FVector& HitTarget)
 	const FVector ToEndLoc = EndLoc - TraceStart;
 	float TraceLength = TRACE_LENGTH;
 
-	/*
-	DrawDebugSphere(GetWorld(), SphereCenter, SphereRadius, 12, FColor::Red, true);
-	DrawDebugSphere(GetWorld(), EndLoc, 4.f, 12, FColor::Green, true);
-	DrawDebugLine(
-		GetWorld(),
-		TraceStart,
-		FVector(TraceStart + ToEndLoc * TraceLength / ToEndLoc.Size()),
-		FColor::Cyan,
-		true
-		);
-	*/
 
 	return FVector(TraceStart + ToEndLoc * TraceLength / ToEndLoc.Size());
 }

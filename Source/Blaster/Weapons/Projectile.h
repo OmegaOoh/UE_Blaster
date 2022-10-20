@@ -17,16 +17,33 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	virtual void Destroyed() override;
 
+	/*
+	 * Used with Server-Side Rewind
+	 */
+
+	UPROPERTY(EditAnywhere)
+	bool bUseServerSideRewind = false;
+
+	FVector_NetQuantize TraceStart;
+	FVector_NetQuantize100 InitialVelocity;
+
+	UPROPERTY(EditAnywhere)
+	float InitialSpeed = 25000.f;
+
+	//Only set This for Grenade and Rocket
+	UPROPERTY(EditAnywhere)
+	float Damage = 20.f;
+
+	//Doesn't Matter for Grenade and Rocket
+	UPROPERTY(EditAnywhere)
+	float HeadShotDamage = 40.f;
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
 	UFUNCTION()
 	virtual void OnHit(UPrimitiveComponent* HitComp, AActor*OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
-
-
-	UPROPERTY(EditAnyWhere)
-	float Damage = 20.f;
 
 	UPROPERTY(EditAnywhere, Category = "DamageRadius")
 	float MinDamage = 10.f;

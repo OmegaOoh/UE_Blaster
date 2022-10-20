@@ -51,16 +51,35 @@ public:
 
 	void AddAnouncement();
 
+	void AddKillFeedWidget(FString Killer, FString Victim);
 
 protected:
 	virtual void BeginPlay() override;
+
 private:
+
+	UPROPERTY()
+	class APlayerController* OwningPlayer;
+
 	FHUDPackage HUDPackage;
 
 	void DrawCrosshair(UTexture2D* Texture, FVector2D ViewportCenter, FVector2D Spread, FLinearColor CrosshairColor);
 
 	UPROPERTY(EditAnywhere)
 	float CrosshairSpreadMax = 16.f;
+
+	UPROPERTY(EditAnywhere, Category = "KillFeed")
+	TSubclassOf<class UKillFeedWidget> KillFeedClass;
+
+	UPROPERTY(EditAnywhere,Category = "KillFeed")
+	float KillFeedTime = 2.5f;
+
+	UFUNCTION()
+	void KillFeedTimerFinished(UKillFeedWidget* MsgToRemove);
+
+	UPROPERTY()
+	TArray<UKillFeedWidget*> KillMessages;
+
 public:
 	FORCEINLINE void SetHUDPackage(const FHUDPackage& Package) { HUDPackage = Package; }
 };

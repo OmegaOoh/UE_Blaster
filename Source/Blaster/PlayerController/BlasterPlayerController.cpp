@@ -15,7 +15,7 @@
 #include "Blaster/BlasterComponents/CombatComponent.h"
 #include "Blaster/PlayerState/BlasterPlayerState.h"
 #include "Components/Image.h"
-
+#include "Blaster/HUD/ReturnToMenu.h"
 
 void ABlasterPlayerController::BeginPlay()
 {
@@ -42,12 +42,18 @@ void ABlasterPlayerController::CheckPing(float DeltaSeconds)
 		PlayerState = PlayerState == nullptr ? GetPlayerState<APlayerState>() : PlayerState;
 		if (PlayerState)
 		{
+			UE_LOG(LogTemp, Warning, TEXT("PlayerState->GetCompressedPing() * 4: %d"), PlayerState->GetCompressedPing() * 4);
 			if (PlayerState->GetCompressedPing() * 4 > HighPingTreshold) // ping is compressed; It's Actually Ping / 4
 			{
 				HighPingWarning();
 				HighPingAnimRunningTime = 0.f;
+				ServerReportPingStatus(true);
 			}
 			HighPingRunningTime = 0.f;
+		}
+		else
+		{
+			ServerReportPingStatus(false);
 		}
 
 	}
@@ -107,6 +113,85 @@ void ABlasterPlayerController::OnPossess(APawn* InPawn)
 
 	ABlasterCharacter* BlasterCharacter = Cast<ABlasterCharacter>(InPawn);
 }
+
+void ABlasterPlayerController::SetupInputComponent()
+{
+	Super::SetupInputComponent();
+
+	if (InputComponent == nullptr) return;
+
+	InputComponent->BindAction("Quit", IE_Pressed, this, &ABlasterPlayerController::ShowReturntoMenu);
+}
+
+void ABlasterPlayerController::ShowReturntoMenu()
+{
+	//TODO show the Return to Menu Widget.
+	if (ReturnToMenuWidget == nullptr) return;
+	if (ReturnToMenu == nullptr)
+	{
+		ReturnToMenu = CreateWidget<UReturnToMenu>(this, ReturnToMenuWidget);
+	}
+	if (ReturnToMenu)
+	{
+		bReturnToMenuOpen = !bReturnToMenuOpen;
+		if (bReturnToMenuOpen)
+		{
+			ReturnToMenu->MenuSetup();
+		}
+		else
+		{
+			ReturnToMenu->MenuTearDown();
+		}
+
+	}
+}
+
+/*
+ * Kill Feed
+ */
+void ABlasterPlayerController::BroadcastElim(APlayerState* Attacker, APlayerState* Victim)
+{
+	ClientElimAnnoucement(Attacker, Victim);
+}
+
+void ABlasterPlayerController::ClientElimAnnoucement_Implementation(APlayerState* Attacker, APlayerState* Victim)
+{
+	APlayerState* Self = GetPlayerState<APlayerState>();
+	if(Attacker && Victim &&  Self)
+	{
+		BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
+		if (BlasterHUD)
+		{
+			if (Attacker == Self && Victim != Self)
+			{
+				BlasterHUD->AddKillFeedWidget("You", Victim->GetPlayerName());
+				return;
+			}
+			if (Attacker != Self && Victim == Self)
+			{
+				BlasterHUD->AddKillFeedWidget(Attacker->GetPlayerName(), "You");
+				return;
+			}
+			if (Attacker == Victim && Victim == Self)
+			{
+				BlasterHUD->AddKillFeedWidget("You", "YourSelf");
+				return;
+			}
+			if (Attacker == Victim && Victim != Self)
+			{
+				BlasterHUD->AddKillFeedWidget(Attacker->GetPlayerName(), "Themselves");
+				return;
+			}
+			if (Attacker != Self && Victim != Self)
+			{
+				BlasterHUD->AddKillFeedWidget(Attacker->GetPlayerName(), Victim->GetPlayerName());
+			}
+
+		}
+
+	}
+}
+
 
 void ABlasterPlayerController::SetHUDHealth(float Health, float MaxHealth)
 {
@@ -428,6 +513,7 @@ void ABlasterPlayerController::ClientReportServerTime_Implementation(float TimeO
 	float TimeServerReceivedClientRequest)
 {
 	float RoundTripTime = GetWorld()->GetTimeSeconds() - TimeOfClientRequest;
+	SingleTripTime = 0.5f * RoundTripTime;
 	float CurrentServerTime = TimeServerReceivedClientRequest + (0.5f * RoundTripTime);
 	ClientServerDelta = CurrentServerTime - GetWorld()->GetTimeSeconds();
 }
@@ -465,6 +551,11 @@ void ABlasterPlayerController::OnRep_MatchState()
 	{
 		HandleCoolDown();
 	}
+}
+
+void ABlasterPlayerController::ServerReportPingStatus_Implementation(bool bHighPing)
+{
+	HighPingDelegate.Broadcast(bHighPing);
 }
 
 void ABlasterPlayerController::HandleMatchHasStarted()

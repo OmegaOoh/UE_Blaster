@@ -10,6 +10,7 @@
 #include "Blaster/BlasterTypes/CombatState.h"
 #include "BlasterCharacter.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLeftGame);
 
 UCLASS()
 class BLASTER_API ABlasterCharacter : public ACharacter, public IInteractwithCrosshairInterface
@@ -24,20 +25,24 @@ public:
 	virtual void Destroyed() override;
 	virtual void PostInitializeComponents() override;
 
-	//Montage
+	/*
+	 * Play Montages
+	 */
 	void PlayFireMontage(bool bAiming);
 	void PlayReloadMontage();
 	void PlayHitReactMontage();
 	void PlayElimMontage();
 	void PlayThrowGrenadeMontage();
+	void PlaySwapMontage();
 
 	virtual void OnRep_ReplicateMovement() override;
+	void DropOrDestroyWeapon();
 
 	ECombatState GetCombatState() const;
 
-	void Elim();
+	void Elim(bool bPlayerLeftGame);
 	UFUNCTION(NetMulticast, Reliable)
-	void MulticastElim();
+	void MulticastElim(bool bPlayerLeftGame);
 
 	UPROPERTY(Replicated)
 	bool bDisableGameplay = false;
@@ -68,6 +73,18 @@ public:
 
 	UPROPERTY()
 	TMap<FName, class UBoxComponent*> HitCollisionBox;
+
+	bool bFinishedSwapping = false;
+
+	UFUNCTION(Server, Reliable)
+	void ServerLeaveGame();
+
+	FOnLeftGame OnLeftGame;
+
+	UFUNCTION(NetMulticast,Reliable)
+	void MulticastGainedTheLead();
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastLostTheLead();
 
 protected:
 	virtual void BeginPlay() override;
@@ -210,8 +227,12 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = Combat)
 		UAnimMontage* ElimMontage;
+
 	UPROPERTY(EditAnywhere, Category = Combat)
 		UAnimMontage* ThrowGrenadeMontage;
+
+	UPROPERTY(EditAnywhere, Category = Combat)
+		UAnimMontage* SwapMontage;
 
 	void HideCameraIfCharacterClose();
 
@@ -263,6 +284,10 @@ private:
 
 	void ElimTimerFinished();
 
+	bool bLeftGame = false;
+
+	
+
 	/*
 	 * Dissolve Effect
 	 */
@@ -303,6 +328,11 @@ private:
 	UPROPERTY()
 	class ABlasterPlayerState* BlasterPlayerState;
 
+	UPROPERTY(EditAnywhere)
+	class UNiagaraSystem* CrownSystem;
+
+	UPROPERTY()
+	class UNiagaraComponent* CrownComponent;
 
 	/*
 	 * Grenade
@@ -336,4 +366,5 @@ public:
 	FORCEINLINE void SetShield(float Amount) { Shield = Amount; }
 	FORCEINLINE float GetMaxShield() const { return MaxShield; }
 	bool IsLocallyReloading();
+	FORCEINLINE ULagCompensationComponent* GetLagCompensation() const { return LagCompensation; }
 };

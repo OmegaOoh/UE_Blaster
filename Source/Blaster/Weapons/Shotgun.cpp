@@ -4,6 +4,8 @@
 #include "Shotgun.h"
 #include "Engine/SkeletalMeshSocket.h"
 #include "Blaster/Character/BlasterCharacter.h"
+#include "Blaster/BlasterComponents/LagCompensationComponent.h"
+#include "Blaster/PlayerController/BlasterPlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Particles/ParticleSystemComponent.h"
@@ -24,21 +26,26 @@ void AShotgun::FireShotgun(const TArray<FVector_NetQuantize>& HitTargetsArray)
 
 		//Maps hit character to number of times hit
 		TMap<ABlasterCharacter*, uint32> HitMap;
+		TMap<ABlasterCharacter*, uint32> HeadShotHitMap;
 		for (FVector_NetQuantize HitTarget : HitTargetsArray)
 		{
 			FHitResult FireHit;
 			WeaponTraceHit(Start, HitTarget,FireHit);
 
 			ABlasterCharacter* BlasterCharacter = Cast<ABlasterCharacter>(FireHit.GetActor());
-			if(BlasterCharacter)
+			if (BlasterCharacter)
 			{
-				if(HitMap.Contains(BlasterCharacter))
+				const bool bHeadShot = FireHit.BoneName.ToString() == FString("head");
+
+				if (bHeadShot)
 				{
-					HitMap[BlasterCharacter] ++;
+					if (HeadShotHitMap.Contains(BlasterCharacter)) HeadShotHitMap[BlasterCharacter] ++;
+					else HeadShotHitMap.Emplace(BlasterCharacter, 1);
 				}
 				else
 				{
-					HitMap.Emplace(BlasterCharacter, 1);
+					if (HitMap.Contains(BlasterCharacter)) HitMap[BlasterCharacter] ++;
+					else HitMap.Emplace(BlasterCharacter, 1);
 				}
 
 				if (ImpactParticles)
@@ -50,7 +57,6 @@ void AShotgun::FireShotgun(const TArray<FVector_NetQuantize>& HitTargetsArray)
 						FireHit.ImpactNormal.Rotation()
 					);
 				}
-
 				if (HitSound)
 				{
 					UGameplayStatics::PlaySoundAtLocation(
@@ -64,19 +70,61 @@ void AShotgun::FireShotgun(const TArray<FVector_NetQuantize>& HitTargetsArray)
 
 			}
 		}
+		TArray<ABlasterCharacter*> HitCharacters;
+		TMap<ABlasterCharacter*, float> DamageMap;
+		//Calculate BodyShot Damage  by Multiplying Times Hit * Damage - Stored In DamageMap
 		for (auto HitPair : HitMap)
 		{
-			if (HitPair.Key && HasAuthority() && InstigatorController)
+			if (HitPair.Key && InstigatorController)
 			{
-				UGameplayStatics::ApplyDamage(
-					HitPair.Key,
-					Damage * HitPair.Value, //Multiply Damage to Number of Times Hit
-					InstigatorController,
-					this,
-					UDamageType::StaticClass()
-				);
+				DamageMap.Emplace(HitPair.Key, HitPair.Value * Damage);
+				HitCharacters.AddUnique(HitPair.Key);
 			}
 		}
+		//Calculate HeadShot Damage  by Multiplying Times Hit * HeadShot Damage - Stored In DamageMap
+		for (auto HSHitPair : HeadShotHitMap)
+		{
+			if (HSHitPair.Key && InstigatorController)
+			{
+				if (HeadShotHitMap.Contains(HSHitPair.Key)) DamageMap[HSHitPair.Key] += HSHitPair.Value * HeadShotDamage;
+				else HeadShotHitMap.Emplace(HSHitPair.Key, HSHitPair.Value * HeadShotDamage);
+				HitCharacters.AddUnique(HSHitPair.Key);
+			}
+		}
+		//Loop Though DamageMap to get Total Damage for Each Character
+		for (auto DamagePair: DamageMap)
+		{
+			if(DamagePair.Key  && InstigatorController)
+			{
+				bool bCauseAuthDamage = !bUseServerSideRewind || OwnerPawn->IsLocallyControlled();
+				if (HasAuthority() && bCauseAuthDamage)
+				{
+					UGameplayStatics::ApplyDamage(
+						DamagePair.Key,
+						Damage * DamagePair.Value, //Cal. Dmg in two for loop above.
+						InstigatorController,
+						this,
+						UDamageType::StaticClass()
+					);
+				}
+			}
+		}
+
+		//ServerSideRewind
+		 if (!HasAuthority() && bUseServerSideRewind)
+		 {
+			BlasterOwnerCharacter = BlasterOwnerCharacter == nullptr ? Cast<ABlasterCharacter>(OwnerPawn) : BlasterOwnerCharacter;
+			BlasterOwnerPlayerController = BlasterOwnerPlayerController == nullptr ? Cast<ABlasterPlayerController>(InstigatorController) : BlasterOwnerPlayerController;
+			if (BlasterOwnerPlayerController && BlasterOwnerCharacter && BlasterOwnerCharacter->GetLagCompensation() && BlasterOwnerCharacter->IsLocallyControlled())
+			{
+				BlasterOwnerCharacter->GetLagCompensation()->ShotgunServerScoreRequest(
+					HitCharacters,
+					Start,
+					HitTargetsArray,
+					BlasterOwnerPlayerController->GetServerTime() - BlasterOwnerPlayerController->SingleTripTime
+				);
+			}
+		 }
 	}
 }
 

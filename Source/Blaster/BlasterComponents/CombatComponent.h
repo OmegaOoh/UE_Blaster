@@ -26,17 +26,23 @@ public:
 	void SwapWeapon();
 	void Reload();
 	void UpdateAmmoValues();
+	void FireButtonPressed(bool bPressed);
+
+	//Reloading
 	UFUNCTION(BlueprintCallable)
 	void FinishReloading();
 
-	void FireButtonPressed(bool bPressed);
+	//SwapWeapons
+	UFUNCTION(BlueprintCallable)
+	void FinishedSwap();
+	UFUNCTION(BlueprintCallable)
+	void FinishedSwapAttatchedWeapon();
 
+	//Grenade Throwing
 	UFUNCTION(BlueprintCallable)
 	void ThrowGrenadeFinish();
-
 	UFUNCTION(BlueprintCallable)
 	void LaunchGrenade();
-
 	UFUNCTION(Server, Reliable)
 	void ServerLaunchGrenade(const FVector_NetQuantize& Target);
 
@@ -81,12 +87,12 @@ protected:
 
 	void LocalFire(const FVector_NetQuantize& LocalHitTarget);
 	void ShotGunLocalFire(const TArray<FVector_NetQuantize>& LocalHitTargets);
-	UFUNCTION(Server, Reliable)
-	void ServerFire(const FVector_NetQuantize& TraceHitTarget);
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerFire(const FVector_NetQuantize& TraceHitTarget, float FireDelay);
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastFire(const FVector_NetQuantize& TraceHitTarget);
-	UFUNCTION(Server, Reliable)
-	void ServerShotgunFire(const TArray<FVector_NetQuantize>& TraceHitTargetsArray);
+	UFUNCTION(Server, Reliable,WithValidation)
+	void ServerShotgunFire(const TArray<FVector_NetQuantize>& TraceHitTargetsArray, float FireDelay);
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastShotgunFire(const TArray<FVector_NetQuantize>& TraceHitTargetsArray);
 
