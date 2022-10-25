@@ -16,6 +16,7 @@
 #include "Blaster/PlayerState/BlasterPlayerState.h"
 #include "Components/Image.h"
 #include "Blaster/HUD/ReturnToMenu.h"
+#include "Blaster/BlasterTypes/Annoucement.h"
 
 void ABlasterPlayerController::BeginPlay()
 {
@@ -31,6 +32,7 @@ void ABlasterPlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProper
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(ABlasterPlayerController, MatchState);
+	DOREPLIFETIME(ABlasterPlayerController, bShowTeamScores);
 
 }
 
@@ -90,6 +92,74 @@ void ABlasterPlayerController::Tick(float DeltaSeconds)
 	}
 }
 
+void ABlasterPlayerController::HideTeamScore()
+{
+	BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
+	bool bHUDValid = BlasterHUD &&
+		BlasterHUD->CharacterOverlay &&
+		BlasterHUD->CharacterOverlay->BlueTeamScore &&
+		BlasterHUD->CharacterOverlay->RedTeamScore &&
+		BlasterHUD->CharacterOverlay->ScoreSpacer ;
+
+	if(bHUDValid)
+	{
+		BlasterHUD->CharacterOverlay->RedTeamScore->SetText(FText());
+		BlasterHUD->CharacterOverlay->BlueTeamScore->SetText(FText());
+		BlasterHUD->CharacterOverlay->ScoreSpacer->SetText(FText());
+	}
+}
+
+void ABlasterPlayerController::InitTeamScore()
+{
+	BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
+	bool bHUDValid = BlasterHUD &&
+		BlasterHUD->CharacterOverlay &&
+		BlasterHUD->CharacterOverlay->BlueTeamScore &&
+		BlasterHUD->CharacterOverlay->RedTeamScore &&
+		BlasterHUD->CharacterOverlay->ScoreSpacer;
+
+	if (bHUDValid)
+	{
+		FString Zero("0");
+		FString Spacer("|");
+		BlasterHUD->CharacterOverlay->RedTeamScore->SetText(FText::FromString(Zero));
+		BlasterHUD->CharacterOverlay->BlueTeamScore->SetText(FText::FromString(Zero));
+		BlasterHUD->CharacterOverlay->ScoreSpacer->SetText(FText::FromString(Spacer));
+	}
+
+}
+
+void ABlasterPlayerController::SetHUDRedTeamScore(int32 RedScore)
+{
+	BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
+	bool bHUDValid = BlasterHUD &&
+		BlasterHUD->CharacterOverlay &&
+		BlasterHUD->CharacterOverlay->RedTeamScore;
+
+	if (bHUDValid)
+	{
+		FString ScoreText = FString::Printf(TEXT("%d"), RedScore);
+		BlasterHUD->CharacterOverlay->RedTeamScore->SetText(FText::FromString(ScoreText));
+	}
+
+
+}
+
+void ABlasterPlayerController::SetHUDBlueTeamScore(int32 BlueScore)
+{
+	BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
+	bool bHUDValid = BlasterHUD &&
+		BlasterHUD->CharacterOverlay &&
+		BlasterHUD->CharacterOverlay->BlueTeamScore;
+
+	if (bHUDValid)
+	{
+		FString ScoreText = FString::Printf(TEXT("%d"), BlueScore);
+		BlasterHUD->CharacterOverlay->BlueTeamScore->SetText(FText::FromString(ScoreText));
+	}
+
+}
+
 void ABlasterPlayerController::CheckTimeSync(float DeltaTime)
 {
 
@@ -125,7 +195,6 @@ void ABlasterPlayerController::SetupInputComponent()
 
 void ABlasterPlayerController::ShowReturntoMenu()
 {
-	//TODO show the Return to Menu Widget.
 	if (ReturnToMenuWidget == nullptr) return;
 	if (ReturnToMenu == nullptr)
 	{
@@ -146,9 +215,22 @@ void ABlasterPlayerController::ShowReturntoMenu()
 	}
 }
 
+void ABlasterPlayerController::OnRep_ShowTeamScore()
+{
+	if (bShowTeamScores)
+	{
+		InitTeamScore();
+	}
+	else
+	{
+		HideTeamScore();
+	}
+}
+
 /*
  * Kill Feed
  */
+
 void ABlasterPlayerController::BroadcastElim(APlayerState* Attacker, APlayerState* Victim)
 {
 	ClientElimAnnoucement(Attacker, Victim);
@@ -528,12 +610,12 @@ void ABlasterPlayerController::ReceivedPlayer()
 	}
 }
 
-void ABlasterPlayerController::OnMatchStateSet(FName State)
+void ABlasterPlayerController::OnMatchStateSet(FName State, bool bTeamsMatch)
 {
 		MatchState = State;
 		if (MatchState == MatchState::InProgress)
 		{
-			HandleMatchHasStarted();
+			HandleMatchHasStarted(bTeamsMatch);
 		}
 		else if (MatchState == MatchState::Cooldown)
 		{
@@ -558,22 +640,29 @@ void ABlasterPlayerController::ServerReportPingStatus_Implementation(bool bHighP
 	HighPingDelegate.Broadcast(bHighPing);
 }
 
-void ABlasterPlayerController::HandleMatchHasStarted()
+void ABlasterPlayerController::HandleMatchHasStarted(bool bTeamsMatch)
 {
+	if(HasAuthority()) bShowTeamScores = bTeamsMatch;
 	BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
 
 	if (BlasterHUD)
 	{
-		if(BlasterHUD && !BlasterHUD->CharacterOverlay)
-		{
-			BlasterHUD->AddCharacterOverlay();
-		}
+		if(BlasterHUD && !BlasterHUD->CharacterOverlay) BlasterHUD->AddCharacterOverlay();
 
 		if (BlasterHUD->Announcement)
 		{
-				BlasterHUD->Announcement->SetVisibility(ESlateVisibility::Hidden);
+			BlasterHUD->Announcement->SetVisibility(ESlateVisibility::Hidden);
 		}
-		
+		if (!HasAuthority()) return;
+		if(bTeamsMatch)
+		{
+			InitTeamScore();
+		}
+		else
+		{
+			HideTeamScore();
+		}
+
 	}
 }
 
@@ -598,7 +687,7 @@ void ABlasterPlayerController::HandleCoolDown()
 		if (bHUDValid)
 		{
 			BlasterHUD->Announcement->SetVisibility(ESlateVisibility::Visible);
-			FString AnnoucementText("New Match Start in:");
+			FString AnnoucementText = Annoucement::NewMatchStartIn;
 			BlasterHUD->Announcement->AnnoucementText->SetText(FText::FromString(AnnoucementText));
 
 			ABlasterGameState* BlasterGameState = Cast<ABlasterGameState>(UGameplayStatics::GetGameState(this));
@@ -607,41 +696,8 @@ void ABlasterPlayerController::HandleCoolDown()
 			if(BlasterGameState && BlasterPlayerState)
 			{
 				TArray<ABlasterPlayerState*> TopPlayer = BlasterGameState->TopScoringPlayer;
-				FString InfoTextString;
-				if(TopPlayer.Num() == 0)
-				{
-					InfoTextString = FString("There is no winner.");
-				}
-				else if(TopPlayer.Num() == 1 && TopPlayer[0] == BlasterPlayerState)
-				{
-					InfoTextString = FString::Printf(TEXT("You are The Winner!"));
-		
-				}
-				else if (TopPlayer.Num() == 1 )
-				{
-					InfoTextString = FString::Printf(TEXT("Winner : \n %s"), *TopPlayer[0]->GetPlayerName());
-				}
-				else if (TopPlayer.Num() > 1)
-				{
-					InfoTextString = FString("Player tied for the win:\n");
-					for (auto TiedPlayer : TopPlayer)
-					{
-						InfoTextString.Append(FString::Printf(TEXT("%s\n"), *TiedPlayer->GetPlayerName()));
-					}
-				}
+				FString InfoTextString = bShowTeamScores ? GetTeamsInfoText(BlasterGameState) : GetInfoText(TopPlayer);
 				BlasterHUD->Announcement->InfoText->SetText(FText::FromString(InfoTextString));
-				
-				
-			}
-			else if (BlasterGameState)
-			{
-				FString Error("Error (BlasterGameState is Valid") ;
-				BlasterHUD->Announcement->InfoText->SetText(FText::FromString(Error));
-			}
-			else if (BlasterPlayerState)
-			{
-				FString Error("Error (BlasterPlayerState is Valid");
-				BlasterHUD->Announcement->InfoText->SetText(FText::FromString(Error));
 			}
 		}
 	}
@@ -654,6 +710,75 @@ void ABlasterPlayerController::HandleCoolDown()
 	}
 
 }
+
+FString ABlasterPlayerController::GetInfoText(const TArray<ABlasterPlayerState*>& Players)
+{
+	ABlasterPlayerState* BlasterPlayerState = GetPlayerState<ABlasterPlayerState>();
+	if (BlasterPlayerState == nullptr) return FString();
+	FString InfoTextString;
+	if (Players.Num() == 0)
+	{
+		InfoTextString = Annoucement::NoWinner;
+	}
+	else if (Players.Num() == 1 && Players[0] == BlasterPlayerState)
+	{
+		InfoTextString = Annoucement::YouAreTheWinner;
+
+	}
+	else if (Players.Num() == 1)
+	{
+		InfoTextString = FString::Printf(TEXT("Winner : \n %s"), *Players[0]->GetPlayerName());
+	}
+	else if (Players.Num() > 1)
+	{
+		InfoTextString = Annoucement::WinnerTied;
+		InfoTextString.Append(FString("\n"));
+		for (auto TiedPlayer : Players)
+		{
+			InfoTextString.Append(FString::Printf(TEXT("%s\n"), *TiedPlayer->GetPlayerName()));
+		}
+	}
+	return InfoTextString;
+}
+
+FString ABlasterPlayerController::GetTeamsInfoText(ABlasterGameState* BlasterGameState)
+{
+	if (BlasterGameState == nullptr) return FString();
+	FString InfoTextString;
+
+	const int32 RedTeamScore = BlasterGameState->RedTeam_Score;
+	const int32 BlueTeamScore = BlasterGameState->BlueTeam_Score;
+
+	if (RedTeamScore == 0 && BlueTeamScore == 0)
+	{
+		InfoTextString = Annoucement::NoWinner;
+	}
+	else if (RedTeamScore == BlueTeamScore)
+	{
+		InfoTextString = FString::Printf(TEXT("%s \n"), *Annoucement::TeamsTied);
+		InfoTextString.Append(Annoucement::RedTeam);
+		InfoTextString.Append(TEXT("\n"));
+		InfoTextString.Append(Annoucement::BlueTeam);
+		InfoTextString.Append(TEXT("\n"));
+	}
+	else if (RedTeamScore > BlueTeamScore)
+	{
+		InfoTextString = Annoucement::RedTeamWin;
+		InfoTextString.Append(TEXT("\n"));
+		InfoTextString.Append(FString::Printf(TEXT("%s : %d \n"), *Annoucement::RedTeam, RedTeamScore));
+		InfoTextString.Append(FString::Printf(TEXT("%s : %d \n"), *Annoucement::BlueTeam, BlueTeamScore));
+	}
+	else if (BlueTeamScore > RedTeamScore)
+	{
+		InfoTextString = Annoucement::BlueTeamWin;
+		InfoTextString.Append(TEXT("\n"));
+		InfoTextString.Append(FString::Printf(TEXT("%s : %d \n"), *Annoucement::BlueTeam, BlueTeamScore));
+		InfoTextString.Append(FString::Printf(TEXT("%s : %d \n"), *Annoucement::RedTeam, RedTeamScore));
+	}
+
+	return InfoTextString;
+}
+
 
 // Ping Warning
 void ABlasterPlayerController::HighPingWarning()

@@ -171,7 +171,7 @@ void ABlasterCharacter::Destroyed()
 		ElimBotComponent->DestroyComponent();
 	}
 
-	ABlasterGamemode* BlasterGamemode = Cast<ABlasterGamemode>(UGameplayStatics::GetGameMode(this));
+	BlasterGamemode = BlasterGamemode == nullptr ? GetWorld()->GetAuthGameMode<ABlasterGamemode>() : BlasterGamemode;
 	bool bMatchNotinProgress = BlasterGamemode && BlasterGamemode->GetMatchState() != MatchState::InProgress;
 
 	if(Combat && Combat->EquippedWeapon && bMatchNotinProgress)
@@ -207,6 +207,39 @@ void ABlasterCharacter::MulticastLostTheLead_Implementation()
 	{
 		CrownComponent->DestroyComponent();
 	}
+}
+
+void ABlasterCharacter::SetTeamColor(ETeam Team)
+{
+	// Not Using Separated Material Instance Since material could set its color by tint.
+	if (GetMesh() == nullptr) return;
+	DynamicDissolveMaterialInstance_1 = DynamicDissolveMaterialInstance_1 == nullptr ? UMaterialInstanceDynamic::Create(GetMesh()->GetMaterial(0), this) : DynamicDissolveMaterialInstance_1;
+	DynamicDissolveMaterialInstance_2 = DynamicDissolveMaterialInstance_2 == nullptr ? UMaterialInstanceDynamic::Create(GetMesh()->GetMaterial(1), this) : DynamicDissolveMaterialInstance_2;
+
+	switch (Team)
+	{
+	case ETeam::ET_NoTeam:
+		break;
+	case ETeam::ET_BlueTeam:
+		DynamicDissolveMaterialInstance_1->SetVectorParameterValue(TEXT("Tint"), FLinearColor::Blue);
+		DynamicDissolveMaterialInstance_1->SetVectorParameterValue(TEXT("Dissolve Color"), FLinearColor::Blue);
+		DynamicDissolveMaterialInstance_2->SetVectorParameterValue(TEXT("Tint"), FLinearColor::Blue);
+		DynamicDissolveMaterialInstance_2->SetVectorParameterValue(TEXT("Dissolve Color"), FLinearColor::Blue);
+		break;
+	case ETeam::ET_RedTeam:
+		DynamicDissolveMaterialInstance_1->SetVectorParameterValue(TEXT("Tint"), FLinearColor::Red);
+		DynamicDissolveMaterialInstance_1->SetVectorParameterValue(TEXT("Dissolve Color"), FLinearColor::Red);
+		DynamicDissolveMaterialInstance_2->SetVectorParameterValue(TEXT("Tint"), FLinearColor::Red);
+		DynamicDissolveMaterialInstance_2->SetVectorParameterValue(TEXT("Dissolve Color"), FLinearColor::Red);
+		break;
+
+
+	case ETeam::ET_MAX:
+		break;
+	}
+
+	GetMesh()->SetMaterial(0, DynamicDissolveMaterialInstance_1);
+	GetMesh()->SetMaterial(1, DynamicDissolveMaterialInstance_2);
 }
 
 void ABlasterCharacter::BeginPlay()
@@ -532,6 +565,7 @@ void ABlasterCharacter::PollInit()
 		{
 			BlasterPlayerState->AddToScore(0.f);
 			BlasterPlayerState->AddToDefeats(0);
+			SetTeamColor(BlasterPlayerState->GetTeam());
 
 			ABlasterGameState* BlasterGameState = Cast<ABlasterGameState>(UGameplayStatics::GetGameState(this));
 			if (BlasterGameState && BlasterGameState->TopScoringPlayer.Contains(BlasterPlayerState))
@@ -574,8 +608,11 @@ void ABlasterCharacter::ReceiveDamage(AActor* DamagedActor, float Damage, const 
 {
 	if (bElimmed) return;
 
-	float DamageToHealth = Damage;
+	BlasterGamemode = BlasterGamemode == nullptr ? GetWorld()->GetAuthGameMode<ABlasterGamemode>() : BlasterGamemode;
+	if (bElimmed || BlasterGamemode == nullptr) return;
+	Damage = BlasterGamemode->CalculateDamage(InstigatorController,Controller,Damage);
 
+	float DamageToHealth = Damage;
 	if(Shield > 0)
 	{
 		if (Shield >= Damage)
@@ -599,7 +636,6 @@ void ABlasterCharacter::ReceiveDamage(AActor* DamagedActor, float Damage, const 
 
 	if (Health == 0.f)
 	{
-		ABlasterGamemode* BlasterGamemode = GetWorld()->GetAuthGameMode<ABlasterGamemode>();
 		if (BlasterGamemode)
 		{
 			BlasterPlayerController = BlasterPlayerController == nullptr ? Cast<ABlasterPlayerController>(Controller) : BlasterPlayerController;
@@ -839,7 +875,7 @@ void ABlasterCharacter::MulticastElim_Implementation(bool bPlayerLeftGame)
 
 void ABlasterCharacter::ElimTimerFinished()
 {
-	ABlasterGamemode* BlasterGamemode = GetWorld()->GetAuthGameMode < ABlasterGamemode >();
+	BlasterGamemode = BlasterGamemode == nullptr ? GetWorld()->GetAuthGameMode<ABlasterGamemode>() : BlasterGamemode;
 	if (BlasterGamemode && !bLeftGame)
 	{
 		BlasterGamemode->RequestRespawn(this, Controller);
@@ -852,7 +888,7 @@ void ABlasterCharacter::ElimTimerFinished()
 
 void ABlasterCharacter::ServerLeaveGame_Implementation()
 {
-	ABlasterGamemode* BlasterGamemode = GetWorld()->GetAuthGameMode < ABlasterGamemode >();
+	BlasterGamemode = BlasterGamemode == nullptr ? GetWorld()->GetAuthGameMode<ABlasterGamemode>() : BlasterGamemode;
 	BlasterPlayerState = BlasterPlayerState == nullptr ? GetPlayerState<ABlasterPlayerState>() : BlasterPlayerState;
 	if (BlasterGamemode && BlasterPlayerState)
 	{
@@ -932,12 +968,13 @@ void ABlasterCharacter::UpdateHUDAmmo()
 
 void ABlasterCharacter::SpawnDefaultWeapon()
 {
-	ABlasterGamemode* BlasterGamemode = Cast<ABlasterGamemode>(UGameplayStatics::GetGameMode(this));
+	BlasterGamemode = BlasterGamemode == nullptr ? GetWorld()->GetAuthGameMode<ABlasterGamemode>() : BlasterGamemode;
 	UWorld* World = GetWorld();
 	if (BlasterGamemode && World && !bElimmed && DefaultWeaponClass)
 	{
 		AWeapon*  StartingWeapon = World->SpawnActor<AWeapon>(DefaultWeaponClass);
 		StartingWeapon->bDestroyedWeapon = true;
+		StartingWeapon->SetWeaponState(EWeaponState::EWS_Equipped);
 		if(Combat)
 		{
 			Combat->EquipWeapon(StartingWeapon);

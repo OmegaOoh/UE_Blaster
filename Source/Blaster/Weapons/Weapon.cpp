@@ -155,6 +155,7 @@ void AWeapon::OnWeaponStateSet()
 		break;
 
 	case EWeaponState::EWS_Dropped:
+
 		ShowPickupWidget(true);
 		if(HasAuthority())
 		{

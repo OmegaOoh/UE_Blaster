@@ -32,6 +32,10 @@ public:
 	void SetHUDWeaponName(EWeaponType WeaponName);
 	void SetHUDGrenade(int32 Grenade);
 	virtual void Tick(float DeltaSeconds) override;
+	void HideTeamScore();
+	void InitTeamScore();
+	void SetHUDRedTeamScore(int32 RedScore);
+	void SetHUDBlueTeamScore(int32 BlueScore);
 
 	virtual float GetServerTime();
 	virtual void ReceivedPlayer() override; //Sync with ServerClock ASAP
@@ -39,8 +43,8 @@ public:
 	float TimeSyncFrequency = 5.f;
 	float TimeSyncRunningTime = 0.f;
 	void CheckTimeSync(float DeltaTime);
-	void OnMatchStateSet(FName State);
-	void HandleMatchHasStarted();
+	void OnMatchStateSet(FName State, bool bTeamsMatch = false);
+	void HandleMatchHasStarted(bool bTeamsMatch = false);
 	void HandleCoolDown();
 
 	float SingleTripTime;
@@ -83,6 +87,15 @@ protected:
 
 	UFUNCTION(Client,Reliable)
 	void ClientElimAnnoucement(APlayerState* Attacker, APlayerState* Victim);
+
+	UPROPERTY(ReplicatedUsing = OnRep_ShowTeamScore)
+	bool bShowTeamScores = false;
+
+	UFUNCTION()
+	void OnRep_ShowTeamScore();
+
+	FString GetInfoText(const TArray<class ABlasterPlayerState*>& Players);
+	FString GetTeamsInfoText(class ABlasterGameState* BlasterGameState);
 
 private:
 	/*

@@ -20,6 +20,25 @@ public:
 	UPROPERTY(Replicated)
 	TArray<class ABlasterPlayerState*> TopScoringPlayer;
 
+	/*
+	 * Teams
+	 */
+	void RedTeamScores();
+	void BlueTeamScores();
+
+	TArray<ABlasterPlayerState*> RedTeam;
+	TArray<ABlasterPlayerState*> BlueTeam;
+
+	UPROPERTY(ReplicatedUsing = OnRep_RedTeamScore)
+	float RedTeam_Score = 0.f;
+	UFUNCTION()
+	void OnRep_RedTeamScore();
+
+	UPROPERTY(ReplicatedUsing = OnRep_BlueTeamScore)
+	float BlueTeam_Score = 0.f;
+	UFUNCTION()
+	void OnRep_BlueTeamScore();
+
 private:
 
 	float TopScore = 0.f;

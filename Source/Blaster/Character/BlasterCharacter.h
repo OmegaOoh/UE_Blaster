@@ -8,6 +8,7 @@
 #include "Blaster/Interfaces/InteractwithCrosshairInterface.h"
 #include "Components/TimelineComponent.h"
 #include "Blaster/BlasterTypes/CombatState.h"
+#include "Blaster/BlasterTypes/Team.h"
 #include "BlasterCharacter.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLeftGame);
@@ -24,7 +25,6 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void Destroyed() override;
 	virtual void PostInitializeComponents() override;
-
 	/*
 	 * Play Montages
 	 */
@@ -85,6 +85,11 @@ public:
 	void MulticastGainedTheLead();
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastLostTheLead();
+
+	/*
+	 * Team Colors
+	 */
+	void SetTeamColor(ETeam Team);
 
 protected:
 	virtual void BeginPlay() override;
@@ -347,6 +352,9 @@ private:
 
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<AWeapon> DefaultWeaponClass;
+
+	UPROPERTY()
+	class ABlasterGamemode* BlasterGamemode;
 
 public:
 	FORCEINLINE float GetAO_Yaw() const { return AO_Yaw; }
