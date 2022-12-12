@@ -37,7 +37,7 @@
 		},
 		{
 			"Name": "MixamoAnimToUE5",
-			"Enabled": true
+			"Enabled": false
 		}
 	]
 }
